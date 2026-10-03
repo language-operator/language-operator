@@ -2,8 +2,36 @@ apiVersion: v1
 entries:
   language-operator:
   - apiVersion: v2
+    appVersion: 0.3.15
+    created: "2026-10-03T03:14:08.993670895Z"
+    dependencies:
+    - condition: argo-workflows.enabled
+      name: argo-workflows
+      repository: oci://ghcr.io/argoproj/argo-helm
+      version: 2.0.3
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 91072098eab949dc40d06f5ce5c22b4bca10648902d6175a7754728a53940b11
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.3.15.tgz
+    version: 0.3.15
+  - apiVersion: v2
     appVersion: 0.3.14
-    created: "2026-10-03T02:59:01.887939563Z"
+    created: "2026-10-03T03:14:08.982668164Z"
     dependencies:
     - condition: argo-workflows.enabled
       name: argo-workflows
@@ -29,10 +57,3258 @@ entries:
     urls:
     - https://language-operator.github.io/language-operator/language-operator-0.3.14.tgz
     version: 0.3.14
+  - apiVersion: v2
+    appVersion: 0.3.13
+    created: "2026-10-03T03:14:08.972105515Z"
+    dependencies:
+    - condition: argo-workflows.enabled
+      name: argo-workflows
+      repository: oci://ghcr.io/argoproj/argo-helm
+      version: 2.0.3
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: b86bf5c35b2f4f60488bfefff56fe381eb501f61c56accc7516181b16fb196b6
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.3.13.tgz
+    version: 0.3.13
+  - apiVersion: v2
+    appVersion: 0.3.12
+    created: "2026-10-03T03:14:08.961285Z"
+    dependencies:
+    - condition: argo-workflows.enabled
+      name: argo-workflows
+      repository: oci://ghcr.io/argoproj/argo-helm
+      version: 2.0.3
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 56be0e1c8db7d1757a70daeb47c578013432002d178cbf7ef8d202990787595a
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.3.12.tgz
+    version: 0.3.12
+  - apiVersion: v2
+    appVersion: 0.3.11
+    created: "2026-10-03T03:14:08.9507712Z"
+    dependencies:
+    - condition: argo-workflows.enabled
+      name: argo-workflows
+      repository: oci://ghcr.io/argoproj/argo-helm
+      version: 2.0.3
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 15958c475e36afb9f7c6eab4be2e9dc1cacd963d96ce1d76707b25cb82fa455a
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.3.11.tgz
+    version: 0.3.11
+  - apiVersion: v2
+    appVersion: 0.3.10
+    created: "2026-10-03T03:14:08.940168033Z"
+    dependencies:
+    - condition: argo-workflows.enabled
+      name: argo-workflows
+      repository: oci://ghcr.io/argoproj/argo-helm
+      version: 2.0.3
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 203ce75179d60d339adb3d42b68fc1ccc42a660ae44b2a9d2692d0c770d6ce5a
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.3.10.tgz
+    version: 0.3.10
+  - apiVersion: v2
+    appVersion: 0.3.9
+    created: "2026-10-03T03:14:09.079293972Z"
+    dependencies:
+    - condition: argo-workflows.enabled
+      name: argo-workflows
+      repository: oci://ghcr.io/argoproj/argo-helm
+      version: 2.0.3
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 78285df3e5874bda5fe485dabfeefaab8d6b770d6bb0b7916669ff60f47c565f
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.3.9.tgz
+    version: 0.3.9
+  - apiVersion: v2
+    appVersion: 0.3.8
+    created: "2026-10-03T03:14:09.068625906Z"
+    dependencies:
+    - condition: argo-workflows.enabled
+      name: argo-workflows
+      repository: oci://ghcr.io/argoproj/argo-helm
+      version: 2.0.3
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 4ec9ae8b2f9cb799b4046839e1cd1560eea1beac55e6a932767d7b8afc702907
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.3.8.tgz
+    version: 0.3.8
+  - apiVersion: v2
+    appVersion: 0.3.7
+    created: "2026-10-03T03:14:09.057893962Z"
+    dependencies:
+    - condition: argo-workflows.enabled
+      name: argo-workflows
+      repository: oci://ghcr.io/argoproj/argo-helm
+      version: 2.0.3
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 2a050505aea0bd4a2ed916bba3a6bd50e540bffa8e63916f6e4533fe8173b575
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.3.7.tgz
+    version: 0.3.7
+  - apiVersion: v2
+    appVersion: 0.3.6
+    created: "2026-10-03T03:14:09.047049229Z"
+    dependencies:
+    - condition: argo-workflows.enabled
+      name: argo-workflows
+      repository: oci://ghcr.io/argoproj/argo-helm
+      version: 2.0.3
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: d320f7f033a3af705096d4da49523681160ced281c0d0c813d9bd58c7805c3ca
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.3.6.tgz
+    version: 0.3.6
+  - apiVersion: v2
+    appVersion: 0.3.5
+    created: "2026-10-03T03:14:09.03635795Z"
+    dependencies:
+    - condition: argo-workflows.enabled
+      name: argo-workflows
+      repository: oci://ghcr.io/argoproj/argo-helm
+      version: 2.0.3
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: f0a62bbe2f87c5390f832359d46fa4026d6f8d03a582149a6568ea66466265d6
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.3.5.tgz
+    version: 0.3.5
+  - apiVersion: v2
+    appVersion: 0.3.4
+    created: "2026-10-03T03:14:09.025658825Z"
+    dependencies:
+    - condition: argo-workflows.enabled
+      name: argo-workflows
+      repository: oci://ghcr.io/argoproj/argo-helm
+      version: 2.0.3
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: d508b431fc0606758357b7defdbdb592a700458a9cf927f4997551725c42e6e8
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.3.4.tgz
+    version: 0.3.4
+  - apiVersion: v2
+    appVersion: 0.3.3
+    created: "2026-10-03T03:14:09.015124251Z"
+    dependencies:
+    - condition: argo-workflows.enabled
+      name: argo-workflows
+      repository: oci://ghcr.io/argoproj/argo-helm
+      version: 2.0.3
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 6d495641fe886cb50e1b88b1e487eaf8e3a45c99935c9be16ec09d4dd2bd89ba
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.3.3.tgz
+    version: 0.3.3
+  - apiVersion: v2
+    appVersion: 0.3.2
+    created: "2026-10-03T03:14:09.004357586Z"
+    dependencies:
+    - condition: argo-workflows.enabled
+      name: argo-workflows
+      repository: oci://ghcr.io/argoproj/argo-helm
+      version: 2.0.3
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 8777f037dad9e7287cd32b9d112a33e5dc93fb6276770bf8df5e76d9690cd889
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.3.2.tgz
+    version: 0.3.2
+  - apiVersion: v2
+    appVersion: 0.3.1
+    created: "2026-10-03T03:14:08.928976793Z"
+    dependencies:
+    - condition: argo-workflows.enabled
+      name: argo-workflows
+      repository: oci://ghcr.io/argoproj/argo-helm
+      version: 2.0.3
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 5b2983a9e187dff503bcf0d932bc7e69c20c3f6db350be21b203cc0084bfeb57
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.3.1.tgz
+    version: 0.3.1
+  - apiVersion: v2
+    appVersion: 0.2.0
+    created: "2026-10-03T03:14:08.917573143Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 024590769d55911b66b5fc15a8ff4588c90cc28464f45033216eefc0f35b3f8c
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.2.0.tgz
+    version: 0.2.0
+  - apiVersion: v2
+    appVersion: 0.1.131
+    created: "2026-10-03T03:14:08.512107336Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 55d1ca64574ba16333e0a81cbcdbb861371d9c4e72b80d72c08f76ac98d59ad2
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.131.tgz
+    version: 0.1.131
+  - apiVersion: v2
+    appVersion: 0.1.130
+    created: "2026-10-03T03:14:08.505438141Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 5599cdcd79d04c5eeb5d4b4aa88b26d0620c3017629a081584346dc29cc362fb
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.130.tgz
+    version: 0.1.130
+  - apiVersion: v2
+    appVersion: 0.1.129
+    created: "2026-10-03T03:14:08.492696276Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 2d6b97fad0983bf8d6ada8c6ff69b4d0afbfa1c7b0dc9c02eee95c07c3b77390
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.129.tgz
+    version: 0.1.129
+  - apiVersion: v2
+    appVersion: 0.1.128
+    created: "2026-10-03T03:14:08.485891877Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 424769edc1f510441d99627289f2064b992d1ce0cc6e2b5d000cf8dac3f2fbe1
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.128.tgz
+    version: 0.1.128
+  - apiVersion: v2
+    appVersion: 0.1.127
+    created: "2026-10-03T03:14:08.481014218Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 78f4106261f5c76d3a2e0daf827e834b56f8d0c9a62d54b0fc76ead2ee859b2d
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.127.tgz
+    version: 0.1.127
+  - apiVersion: v2
+    appVersion: 0.1.126
+    created: "2026-10-03T03:14:08.475775979Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 029e1b22f75b2b3e5fdda276084ececb9eddd3a1a8b784898b85c27bfc11f14d
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.126.tgz
+    version: 0.1.126
+  - apiVersion: v2
+    appVersion: 0.1.125
+    created: "2026-10-03T03:14:08.469975463Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: e1f5e7bcfa2dfe7a418664e9b1a7355ae8b7685fdb7163fad3d3f5eaaca1fbe3
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.125.tgz
+    version: 0.1.125
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.463903196Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 695193f0f4c934f9db4e223a869921e55f188ea45079d88062333a275cf03560
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.124.tgz
+    version: 0.1.124
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.459862412Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: c57ba9c405f29d7883cd0835935c2055baf34182249da8598242cbf3491d61c5
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.123.tgz
+    version: 0.1.123
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.452883041Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 80c95831094e16bc40cd630e8570e9cfcefa21911d7168371579535a9c08f655
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.122.tgz
+    version: 0.1.122
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.445085758Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 8b2016e81c65235f57085f655804394dca95f00798d3aa34662c54ddc34f94e4
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.121.tgz
+    version: 0.1.121
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.440781713Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 3d9173f5637fc7867987d5b4ddb86050b15a9b8c7e7bbe18406ba5da53b8cd8c
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.120.tgz
+    version: 0.1.120
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.428093055Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 78653f2f9d8225b399022cdb9712a289d3eb8d4393cf02c8c434fc2365876d61
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.119.tgz
+    version: 0.1.119
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.421688795Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: d029da4ccfd68419cf7d18081a7fd7294e095408228c1f0f22e470fee79cea93
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.118.tgz
+    version: 0.1.118
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.416243186Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 3b5632a1d89f1e7893cb4c07e7425baae8768f2c32504c5cfd18f49baced69fb
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.117.tgz
+    version: 0.1.117
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.411921847Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: ce47099e33a580ed9f2238be82eff11c88d508a6fa5b55fab8c6269b1f0efcba
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.116.tgz
+    version: 0.1.116
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.40652599Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 31aa6f0966f36a004eff5bd841ea5b694188233795c185d83399aaa3310a40a6
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.115.tgz
+    version: 0.1.115
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.400982053Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: c27ee725f863cf875b6925ec0467b6293bb081b9315572172ac8048d82123ff2
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.114.tgz
+    version: 0.1.114
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.396670494Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 011bc019fccc2d90e58b417fdbb6d35da39ae26f666c7079a7d3601d38672328
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.113.tgz
+    version: 0.1.113
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.391472655Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 20cec497c8cd45ad5523925170a221333823a941b4b889cbf29484257784db75
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.112.tgz
+    version: 0.1.112
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.386400557Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 4972b359a8eb5ec884155c165a3367d8eb1eafa1d618a86d48da3d7e3334f31c
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.111.tgz
+    version: 0.1.111
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.382046444Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: c79a8d5a802bed4a70505e4f8a511579747642896ee6a08fe13cfb115e724c29
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.110.tgz
+    version: 0.1.110
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.372204049Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 8921c1c08b0293a61156856ac5bb1a842f81da1cad08397538e5cecdb51c68d6
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.109.tgz
+    version: 0.1.109
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.368025091Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 4dc800aff7d9a24a1f35d0dcbda7bdb6928e60f20beeb71454b4c083392ca373
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.108.tgz
+    version: 0.1.108
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.361800623Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 3a6c02c212e12827ee5cd565c007306c3a955da75667bc24767a7a8ac65325fd
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.107.tgz
+    version: 0.1.107
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.35646237Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 8a43ad912840ef7c1bf8459b1a1d866f72abae7c05edc6b4340f1f2a33c28808
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.106.tgz
+    version: 0.1.106
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.351462164Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 1db924a1629843f4ca61c7b35724e6ae618c0524f51ade004482dfe3626c14da
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.105.tgz
+    version: 0.1.105
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.347225212Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: e0f6ee37cbd46a0c7c7453bc386cdf6bf473260aa990f856d3404badc8503bad
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.104.tgz
+    version: 0.1.104
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.341541692Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 6e9a89e1b74bcf2dcfc91b98e8cd68b13f431a1a1321bbc197deed5c9e09a0b8
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.103.tgz
+    version: 0.1.103
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.336475431Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: fd9da7876a16a0243d3ebbf5e1f083c43de63dbc5d1e2e53261cc87edcbb5f2d
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.102.tgz
+    version: 0.1.102
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.910570276Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 97f9cd736f63a160d24e34149b4b57736eaf727861dc666f721be8d374a47686
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.99.tgz
+    version: 0.1.99
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.905500644Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: b3850446a6fffffbb655c194d6e09f577b5ed8d7aaa7fadf80e0f05d72de35ca
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.98.tgz
+    version: 0.1.98
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.901430286Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: a48fad3e6a632701181210916831f4faf5abde77edd5c288f4407e41b7d019a7
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.97.tgz
+    version: 0.1.97
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.895836575Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 9faee61ab0fb4fc7d646813d20c6d7d9ac91b895bbbbff770f85b34d1328715a
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.96.tgz
+    version: 0.1.96
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.890703645Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 84bc7176d7fca481274d4e8a96edb4914d0311b00b6002f41b577e677dc77c99
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.95.tgz
+    version: 0.1.95
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.886489527Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 1d2a19794f9048b4cbfc657ddfd8472fa8969cd7885aa822adcc62a9524f2b97
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.94.tgz
+    version: 0.1.94
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.880920927Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: de031635b97dc720f883f37843e2cac7eaba981b60f9703f12185a4735a7874f
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.93.tgz
+    version: 0.1.93
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.872411814Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 342f5310de4431414c848e977731a2e6a0862bf9c40996714c9126d9f2427bfb
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.89.tgz
+    version: 0.1.89
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.866836755Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 681478d9fdd012068d8ebaf89d06bd9eb8e52230f09850d076e1160b8a77da45
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.88.tgz
+    version: 0.1.88
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.861628612Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: a605b8928b9dc57d08ad578a19bd4b7ac6dc908ead3ef49e760cfde31b981dd2
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.87.tgz
+    version: 0.1.87
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.857437337Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: aa804e7ce188cfdc8d4a114d98daa81759987efafe1457529e884f737b589f85
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.86.tgz
+    version: 0.1.86
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.852000908Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 2249defb7925ffb59f858b1e157313b28e7e63b8e7ac0dde6f1e3a01af07f857
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.84.tgz
+    version: 0.1.84
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.84654504Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: eafb1cc94c4795e7b2eaa74c1e8ad7c3efe2c6bec761ded49d06077151950b04
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.83.tgz
+    version: 0.1.83
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.842253637Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: c61a65b26152950d4da9565170018f133c9788a8d469cf26d5f0f5a8ac6f5792
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.82.tgz
+    version: 0.1.82
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.836651833Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 9e882ac1ecfcd4135db0a18327d08f549ab60cf6f58a58042d196bd3748041e9
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.81.tgz
+    version: 0.1.81
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.831711864Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 35ab9f829790b6ecc77cc95e95d67933e3feb65b51d37d110eaf93ef07c065c0
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.80.tgz
+    version: 0.1.80
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.823051531Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: ba1a37170e7e1f775fa0779ff3d0b2f85862b3dda6625e9c1737760195a7903e
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.79.tgz
+    version: 0.1.79
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.817939678Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: f502c1a0ab741795fb262fadb5a84678cd7f1d2c74da4aa709a961a3ac8730f9
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.78.tgz
+    version: 0.1.78
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.813701895Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 2f8cf68e1d0379698512418b2d338ee51a56ce057eec8fed2bea00e28e00cb65
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.77.tgz
+    version: 0.1.77
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.808478418Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 8f0f3feaa025d14d405b2fa23c1a337c48d3408081801c5fd017f07446b32ceb
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.76.tgz
+    version: 0.1.76
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.803076291Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: afcb923fc116d006b17c57c0dcd98a96205e05ecb4e11660595053e963d43cb0
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.75.tgz
+    version: 0.1.75
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.798901827Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 64bd42b8773c5fa5fb5e6d9ae2a12b12c3a7870feaa2389eba2c14a3cc0a26bb
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.74.tgz
+    version: 0.1.74
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.793085787Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: a78d21b66f0f924597fd0067cb74de62a19f38b34b6ccaaf237cd14f5fe52e95
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.73.tgz
+    version: 0.1.73
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.787969788Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: ac08f39ba98d0a53f64e35b5d74be5cccebe924f0b1e33835449cb1b97ce370d
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.72.tgz
+    version: 0.1.72
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.783833775Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 29043782aac8d63ea2631931679df38c44b03a5a7ac8d587acd912cad6fe2a46
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.71.tgz
+    version: 0.1.71
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.778549924Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: a9e1093c5d2f5f1cadd63d338a97ae239f5d4bd777530c9fd428c954758838fc
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.70.tgz
+    version: 0.1.70
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.770298138Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 67b0b180e5a6191138fd87b3d8c2c2d168a1d291dd3f9f4fb523ad69584bc64a
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.69.tgz
+    version: 0.1.69
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.764548202Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 844c215adf122b49ef6dcdbfdcd072274ded741200d7ccd9e931a937a03446d2
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.68.tgz
+    version: 0.1.68
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.759488594Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 532a08fe11054fbaa023eb0d7159ed8dd3ff2baa659842b93245b9f8e85c3bfc
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.67.tgz
+    version: 0.1.67
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.755459352Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 4a3f539657fbbfddc496652ba5c9902f34488034452468bf2cfe05122f3b4c1b
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.66.tgz
+    version: 0.1.66
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.750035359Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: f1af81cc590a1af538ce501ad57b1bfd60e226d878d1ea9b912877e589121b18
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.65.tgz
+    version: 0.1.65
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.745494409Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: e6278d0254f8eab560ba4c84685e5ac393fdf3c60e2615a5d5aaa4181174ff19
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.64.tgz
+    version: 0.1.64
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.740970379Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 51f109788a91ff5b6ec590a5c33010c0e49169c8829d90d6df85ef3fd4f15768
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.63.tgz
+    version: 0.1.63
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.736123292Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 46b975a7fdcbcbde64daaffc0be18f9d1dfd39b00a146777fb4ae958e056dcdc
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.62.tgz
+    version: 0.1.62
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.732297301Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 50c0ee5232c7f4ab84de6ce59955c299ba72890701a214a59eb301e0da32b90a
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.61.tgz
+    version: 0.1.61
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.727593835Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 0a3cff296cd9e37c112950d6439ce6fe208aa5ed51abc030459bd2a66ee358b9
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.60.tgz
+    version: 0.1.60
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.718902852Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 347dd6908ca3c066d95b4f363121bf9d2d57e650d7d40f33e23f560a80aa86b2
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.59.tgz
+    version: 0.1.59
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.713981302Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 9f82ab05de322ecfd9424dcba98dcbdb1549dac42fc80cb615e804066d40878b
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.58.tgz
+    version: 0.1.58
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.710105402Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 127886259c2cd4840fc4a1dca4d732317a9cc510b3270b68819f6d2485d46342
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.57.tgz
+    version: 0.1.57
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.704973065Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: a5d4001fb2eaffdedacf2084aa5e553c8e39e35861b69f3e307f097f7e15ca03
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.56.tgz
+    version: 0.1.56
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.699855112Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: eb07b399fc87878ac53045a1504ea699eb44fe1d7c6b1a4b9ad8007419bb6a66
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.55.tgz
+    version: 0.1.55
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.696136713Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 3ce745608da814ead522c54492c09b0c1e7d5a3abb6f2a14559a7c88bd6ddf66
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.54.tgz
+    version: 0.1.54
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.691060194Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: e8698d38042af567204c1857b319c63cf836871c82fda6354f1aa09a469b3007
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.53.tgz
+    version: 0.1.53
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.686268148Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 1bf5c143e258155e87aaed484c224af58cc79fa77c3e2076601b8c3f2595ef3d
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.52.tgz
+    version: 0.1.52
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.682674055Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: c8ab0685cedb3c2b5a3acfa753e585d8747f8bb24833139087bbc63156c2a888
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.51.tgz
+    version: 0.1.51
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.677460365Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: c043acbbb37c5b4fe252756bf1d95cb7f1617f2ab8d3ffa9df6de081e50d24e9
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.50.tgz
+    version: 0.1.50
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.668821423Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 6e0267a5e9d67937bc8993d75362f4b0db928463aee8f5344f9684fa3cee86bd
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.49.tgz
+    version: 0.1.49
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.663852215Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: d7874cd18f0959ef398101a9c5f7745f618fc40ce0eeced60dfbd82b0fd113da
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.48.tgz
+    version: 0.1.48
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.660079379Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: babc8fb9a08893ebd178b8420f37ab8d7ed01130d5187f7b05b57c7f9cffd31c
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.47.tgz
+    version: 0.1.47
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.654929297Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: fe18a940f9ec3b1d60ef34f4cbf5359d596ebbda469a5db61f9cfa34e29c98e5
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.46.tgz
+    version: 0.1.46
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.650248398Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 1ac4ab333eaa7bd88c3e7bfb5a72584d7299deacd1c4e74190b85fc2ff5d04fd
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.45.tgz
+    version: 0.1.45
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.646239356Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 86479e296aff97367e5c9935a89ccdb702c4ad1c098a8175068a2d23211c5da5
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.44.tgz
+    version: 0.1.44
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.640891807Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 640ec3f2a8e9d6fea4fbdae5124c669f4e5c832d502286cb31bcd989924a85b3
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.43.tgz
+    version: 0.1.43
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.636239229Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 2f2ca5d9793cb8bebfe94188ecaf2e13cb3f5d6e48a8c5566ff49f111dcbd83d
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.42.tgz
+    version: 0.1.42
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.632463698Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 8b052e0b48ae8c3090fe47b4d798aabd0a27b72daec953d5f285037085e3a950
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.41.tgz
+    version: 0.1.41
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.627319072Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 9727062b136e27e31d855a7d433151732042f0d6ff73221540facba1921939c8
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.40.tgz
+    version: 0.1.40
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.619280439Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 6d2e67901f8480e2870c0d70a47e391538602b2a0b4c0f0777906203889170ae
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.39.tgz
+    version: 0.1.39
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.614129899Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 51cc43e25ef4e4a3ef1f99f6f34cf5e94340f22004cf4febce799ffb77fce38b
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.38.tgz
+    version: 0.1.38
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.609321582Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: cade6b31051b31cd82ee127e6b167896209895f88962a709a6991861939eb75a
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.37.tgz
+    version: 0.1.37
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.605323952Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: f7b53a7746fdd689d765414e014205daa9193b9c27ee956fee438d3daecda7b4
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.36.tgz
+    version: 0.1.36
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.599878835Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: b4bd03943bde35861bad8c25a2eb6e80a3c0e0a04442e12230e63b7d4408234b
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.35.tgz
+    version: 0.1.35
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.595651522Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 531902864fb47f84ffd5fbde2cedd942fddc6f12d6f257c27cece48d85d29b24
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.34.tgz
+    version: 0.1.34
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.590253385Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 77b8b98c351282817401197be9c5e35548cf6f53743cf37b2cab74f9dbe85efb
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.33.tgz
+    version: 0.1.33
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.585293386Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: c9a50e6a8c88e9ac2cab0245fe8e357a87361b428c674907de7667c727328895
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.32.tgz
+    version: 0.1.32
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.581516292Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 2a3184046cd6e94a5fdadaeec59b3c570149e92cf5b6a3dc870b44256b9153eb
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.31.tgz
+    version: 0.1.31
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.576222168Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 94f9918727f7655400fb17ffee66b1e425f1f2e6a52cead2f146257c3bf86771
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.30.tgz
+    version: 0.1.30
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.568632273Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 6cfc7205d5aa589947612a5aba38ac2ec2fa594bfb63a0afe3ce74eaad4d7f64
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.29.tgz
+    version: 0.1.29
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.563988974Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: a7875dd255790a8d22748ea2201c09dfa731bdf5231c4def9e44ded14d39bacb
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.28.tgz
+    version: 0.1.28
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.560730663Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: cb65d34c813d476485f5fec91575daaf0b6bc4d6bb6fc9b4df5be41f34f550f1
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.27.tgz
+    version: 0.1.27
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.555994834Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: cd5a481c33d357c52d8bd2235b64f260ce1c8823f9653138c0be34e6d8f7b677
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.26.tgz
+    version: 0.1.26
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.551770888Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: e7b6b4a70f3db3cb2d4be33649b30e25664bcd20febb15cdc64a6c91601161c0
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.25.tgz
+    version: 0.1.25
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.548322231Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 3613795cb185234688d57a1ddfb3c7fa4c8a755411249e83884fb07602bb327f
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.24.tgz
+    version: 0.1.24
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.544100178Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 8859e057fa811333061c83e9a04c8b705fb64246c37718b4baf39a385e79becc
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.23.tgz
+    version: 0.1.23
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.54028717Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 4a8cd14e7263bb94a7f89e2b751b4c7b52220efc6ff2cb3cc063a5eb324a57ed
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.22.tgz
+    version: 0.1.22
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.535994183Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 0f0efe83719db2f7fb9c19159b327d5e2182abcd1aafc591abf5fd9c45968562
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.21.tgz
+    version: 0.1.21
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.532679861Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 472ffa5af0ec357c666ef25039094214fdf974b37bf7fcbd5c8805dcb478b836
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.20.tgz
+    version: 0.1.20
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.524675333Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 749a57453fe471f84be8e7766e199eccc101bda964b2fb145e8112632ed91989
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.19.tgz
+    version: 0.1.19
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.520021456Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 1a14d4ca7d46546688ea618ddd9c3e7dcf6bc3ebec62b332a789f0a953e2c1ed
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.15.tgz
+    version: 0.1.15
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.515502236Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: dafe04aa3b07f33a067f742f34bbc25dededa7d83b6b07421d57b29e95d4f3b4
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.14.tgz
+    version: 0.1.14
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.49768403Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 292a66c40be8a49c1869963ef1f0471e45dc2f00b5be2562c13764858665e9cc
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.13.tgz
+    version: 0.1.13
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.434213104Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 6c6bad064db93370141e0605750242ea4c5e7d47c956b63d74f935e1150c3e24
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.12.tgz
+    version: 0.1.12
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.376445903Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 242afce046b1cfc9e891691fdfe4938166082c32a3a220b51f25a447e6a2c79d
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.11.tgz
+    version: 0.1.11
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.332279179Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 92adaa761f8cdaff504088eef2ce514579d5c766620bf7ef35e498206fcf21fb
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.10.tgz
+    version: 0.1.10
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.875720565Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: c6ad44b05b294db767baee201ccf315c01b27e85f89beb8e5996b4dcf61e9033
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.9.tgz
+    version: 0.1.9
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.827608814Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 19c656cd2f9853b3553ed88a8fa7a394ccaaeb84c76503a6e1d8d549d77ef1ec
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.8.tgz
+    version: 0.1.8
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.773560056Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: a387ded38680e2fd4c39a925492fc973ba9e84e9223de6a1e50c56c925f52c95
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.7.tgz
+    version: 0.1.7
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.723575735Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 27e4122478877ac431ca450149f673a93ad62007682b48feb5bbb26cdc69a6e0
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.6.tgz
+    version: 0.1.6
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.673333019Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: b49cf2f2e4a648e80a7e2748c676379ab9a6a657d06d944aecefee23533d4021
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.5.tgz
+    version: 0.1.5
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.622459704Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 771e45433909e44a1a71ea35f9c2e3ee8deeeb36d5b04ce5f807753963a5a16d
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.4.tgz
+    version: 0.1.4
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.571830706Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 87399cd257480b37eb44a22fc3c8af6ac0e8fc98c485651dbc1ecbd2b3e76aee
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.3.tgz
+    version: 0.1.3
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.52791139Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 09616ec727e0ebf11237dc647c3c25bfa8bdf4d4eafd9e1fbb569e132a69500b
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.2.tgz
+    version: 0.1.2
+  - apiVersion: v2
+    appVersion: latest
+    created: "2026-10-03T03:14:08.327970686Z"
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 7c82b5e1d5414bfacc0be218e079dbc368d0d6341823304e9d8780f5c68f5f50
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: team@langop.dev
+      name: Langop Team
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.1.0.tgz
+    version: 0.1.0
   language-operator-runtimes:
   - apiVersion: v2
+    appVersion: 0.3.15
+    created: "2026-10-03T03:14:09.09270675Z"
+    dependencies:
+    - condition: claude-code.enabled
+      name: claude-code
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.9
+    - condition: openclaw.enabled
+      name: openclaw
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.2
+    - condition: opencode.enabled
+      name: opencode
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.7
+    - condition: deepagents.enabled
+      name: deepagents
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.5
+    - condition: kilo.enabled
+      name: kilo
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.0
+    - condition: qwen-code.enabled
+      name: qwen-code
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.1
+    - condition: cursor.enabled
+      name: cursor
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.1
+    - condition: goose.enabled
+      name: goose
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.1
+    description: Umbrella chart bundling the Language Operator runtimes (openclaw,
+      opencode, claude-code, deepagents, kilo, qwen-code, cursor, goose) as subcharts
+    digest: 72ffe99fc6220335de52073ef2a867e5b462a87f3effd70962c5c503c9176a53
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator-runtimes
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.3.15.tgz
+    version: 0.3.15
+  - apiVersion: v2
     appVersion: 0.3.14
-    created: "2026-10-03T02:59:01.889586225Z"
+    created: "2026-10-03T03:14:09.089523244Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -85,4 +3361,694 @@ entries:
     urls:
     - https://language-operator.github.io/language-operator/language-operator-runtimes-0.3.14.tgz
     version: 0.3.14
-generated: "2026-10-03T02:59:01.87599479Z"
+  - apiVersion: v2
+    appVersion: 0.3.13
+    created: "2026-10-03T03:14:09.087979661Z"
+    dependencies:
+    - condition: claude-code.enabled
+      name: claude-code
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.9
+    - condition: openclaw.enabled
+      name: openclaw
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.2
+    - condition: opencode.enabled
+      name: opencode
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.7
+    - condition: deepagents.enabled
+      name: deepagents
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.5
+    description: Umbrella chart bundling the Language Operator runtimes (openclaw,
+      opencode, claude-code, deepagents) as subcharts
+    digest: ef27093b6e2477bb7eaed1380848e2d94c0b3840d7332044b9624bbb84dbf64e
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator-runtimes
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.3.13.tgz
+    version: 0.3.13
+  - apiVersion: v2
+    appVersion: 0.3.12
+    created: "2026-10-03T03:14:09.0870774Z"
+    dependencies:
+    - condition: claude-code.enabled
+      name: claude-code
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.9
+    - condition: openclaw.enabled
+      name: openclaw
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.2
+    - condition: opencode.enabled
+      name: opencode
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.7
+    - condition: deepagents.enabled
+      name: deepagents
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.5
+    description: Umbrella chart bundling the Language Operator runtimes (openclaw,
+      opencode, claude-code, deepagents) as subcharts
+    digest: 49ea5544583ef0d17d68fbe9aa8e327d7f43a8ef455b20f37182a7731bfecba9
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator-runtimes
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.3.12.tgz
+    version: 0.3.12
+  - apiVersion: v2
+    appVersion: 0.3.11
+    created: "2026-10-03T03:14:09.08614411Z"
+    dependencies:
+    - condition: claude-code.enabled
+      name: claude-code
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.8
+    - condition: openclaw.enabled
+      name: openclaw
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.0
+    - condition: opencode.enabled
+      name: opencode
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.6
+    - condition: deepagents.enabled
+      name: deepagents
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.3
+    description: Umbrella chart bundling the Language Operator runtimes (openclaw,
+      opencode, claude-code, deepagents) as subcharts
+    digest: 98089d588509ba8a2ece648c39206c218f74758c4f66cde9c908599a464ac0cc
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator-runtimes
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.3.11.tgz
+    version: 0.3.11
+  - apiVersion: v2
+    appVersion: 0.3.10
+    created: "2026-10-03T03:14:09.085181426Z"
+    dependencies:
+    - condition: claude-code.enabled
+      name: claude-code
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.5
+    - condition: openclaw.enabled
+      name: openclaw
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.0
+    - condition: opencode.enabled
+      name: opencode
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.4
+    - condition: deepagents.enabled
+      name: deepagents
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.2
+    description: Umbrella chart bundling the Language Operator runtimes (openclaw,
+      opencode, claude-code, deepagents) as subcharts
+    digest: ff678b65583b96e8eb1bc55552f467fe9d5c36e87d8a52a022ecde8cee52c3f2
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator-runtimes
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.3.10.tgz
+    version: 0.3.10
+  - apiVersion: v2
+    appVersion: 0.3.9
+    created: "2026-10-03T03:14:09.101949834Z"
+    dependencies:
+    - condition: claude-code.enabled
+      name: claude-code
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.5
+    - condition: openclaw.enabled
+      name: openclaw
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.0
+    - condition: opencode.enabled
+      name: opencode
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.4
+    - condition: deepagents.enabled
+      name: deepagents
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.2
+    description: Umbrella chart bundling the Language Operator runtimes (openclaw,
+      opencode, claude-code, deepagents) as subcharts
+    digest: 25f6feb87b906a1b18c23b035ce5a139e46e534e2dc773c35f808a6322d6ef25
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator-runtimes
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.3.9.tgz
+    version: 0.3.9
+  - apiVersion: v2
+    appVersion: 0.3.8
+    created: "2026-10-03T03:14:09.100233833Z"
+    dependencies:
+    - condition: claude-code.enabled
+      name: claude-code
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.5
+    - condition: openclaw.enabled
+      name: openclaw
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.0
+    - condition: opencode.enabled
+      name: opencode
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.4
+    - condition: deepagents.enabled
+      name: deepagents
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.2
+    description: Umbrella chart bundling the Language Operator runtimes (openclaw,
+      opencode, claude-code, deepagents) as subcharts
+    digest: 186d54163c199a4b243637fb2c327b87ffdde7d78db37f59fda621b15af32996
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator-runtimes
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.3.8.tgz
+    version: 0.3.8
+  - apiVersion: v2
+    appVersion: 0.3.7
+    created: "2026-10-03T03:14:09.098617839Z"
+    dependencies:
+    - condition: claude-code.enabled
+      name: claude-code
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.5
+    - condition: openclaw.enabled
+      name: openclaw
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.0
+    - condition: opencode.enabled
+      name: opencode
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.3
+    - condition: deepagents.enabled
+      name: deepagents
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.2
+    description: Umbrella chart bundling the Language Operator runtimes (openclaw,
+      opencode, claude-code, deepagents) as subcharts
+    digest: 05a376ffbbd0d1c3c52ecbc0da5639fd9abc8ac7621258c5a36c8c9dd8e66c56
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator-runtimes
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.3.7.tgz
+    version: 0.3.7
+  - apiVersion: v2
+    appVersion: 0.3.6
+    created: "2026-10-03T03:14:09.097717491Z"
+    dependencies:
+    - condition: claude-code.enabled
+      name: claude-code
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.4
+    - condition: openclaw.enabled
+      name: openclaw
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.0
+    - condition: opencode.enabled
+      name: opencode
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.3
+    - condition: deepagents.enabled
+      name: deepagents
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.2
+    description: Umbrella chart bundling the Language Operator runtimes (openclaw,
+      opencode, claude-code, deepagents) as subcharts
+    digest: 2d415e95233782034e63fb119b972a4affa98fc8e41db1ad8470e92453a39ef2
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator-runtimes
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.3.6.tgz
+    version: 0.3.6
+  - apiVersion: v2
+    appVersion: 0.3.5
+    created: "2026-10-03T03:14:09.096778141Z"
+    dependencies:
+    - condition: claude-code.enabled
+      name: claude-code
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.3
+    - condition: openclaw.enabled
+      name: openclaw
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.0
+    - condition: opencode.enabled
+      name: opencode
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.3
+    - condition: deepagents.enabled
+      name: deepagents
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.1
+    description: Umbrella chart bundling the Language Operator runtimes (openclaw,
+      opencode, claude-code, deepagents) as subcharts
+    digest: ae3e90919fef4a8cabae9684a7cd48fae544874bad61d1ec33ec138731a2ce48
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator-runtimes
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.3.5.tgz
+    version: 0.3.5
+  - apiVersion: v2
+    appVersion: 0.3.4
+    created: "2026-10-03T03:14:09.095878274Z"
+    dependencies:
+    - condition: claude-code.enabled
+      name: claude-code
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.3
+    - condition: openclaw.enabled
+      name: openclaw
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.0
+    - condition: opencode.enabled
+      name: opencode
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.3
+    - condition: deepagents.enabled
+      name: deepagents
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.1
+    description: Umbrella chart bundling the Language Operator runtimes (openclaw,
+      opencode, claude-code, deepagents) as subcharts
+    digest: b73ad2b8225cac65d7c34e69d7fc184b486fd294c966729813d169656a9d774f
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator-runtimes
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.3.4.tgz
+    version: 0.3.4
+  - apiVersion: v2
+    appVersion: 0.3.3
+    created: "2026-10-03T03:14:09.094924036Z"
+    dependencies:
+    - condition: claude-code.enabled
+      name: claude-code
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.3
+    - condition: openclaw.enabled
+      name: openclaw
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.0
+    - condition: opencode.enabled
+      name: opencode
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.3
+    - condition: deepagents.enabled
+      name: deepagents
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.1
+    description: Umbrella chart bundling the Language Operator runtimes (openclaw,
+      opencode, claude-code, deepagents) as subcharts
+    digest: e2d9d0c555ecfd6ec50fef208781fd497c0181b273c5c5bb1fa9833bf0819bfb
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator-runtimes
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.3.3.tgz
+    version: 0.3.3
+  - apiVersion: v2
+    appVersion: 0.3.2
+    created: "2026-10-03T03:14:09.093934772Z"
+    dependencies:
+    - condition: claude-code.enabled
+      name: claude-code
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.3
+    - condition: openclaw.enabled
+      name: openclaw
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.0
+    - condition: opencode.enabled
+      name: opencode
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.3
+    - condition: deepagents.enabled
+      name: deepagents
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.1
+    description: Umbrella chart bundling the Language Operator runtimes (openclaw,
+      opencode, claude-code, deepagents) as subcharts
+    digest: 88a9573369b0694c60959844c24939d798b5ee369c23b49b942dfdf57d314550
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator-runtimes
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.3.2.tgz
+    version: 0.3.2
+  - apiVersion: v2
+    appVersion: 0.3.1
+    created: "2026-10-03T03:14:09.084289465Z"
+    dependencies:
+    - condition: claude-code.enabled
+      name: claude-code
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.3
+    - condition: openclaw.enabled
+      name: openclaw
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.0
+    - condition: opencode.enabled
+      name: opencode
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.3
+    - condition: deepagents.enabled
+      name: deepagents
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.1
+    description: Umbrella chart bundling the Language Operator runtimes (openclaw,
+      opencode, claude-code, deepagents) as subcharts
+    digest: c09a76cda004713bae67fd60e17481e31176b094a2a3d0a650a8dee23823d103
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator-runtimes
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.3.1.tgz
+    version: 0.3.1
+  - apiVersion: v2
+    appVersion: 0.2.0
+    created: "2026-10-03T03:14:09.083426958Z"
+    dependencies:
+    - condition: claude-code.enabled
+      name: claude-code
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.3
+    - condition: openclaw.enabled
+      name: openclaw
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.0
+    - condition: opencode.enabled
+      name: opencode
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.3
+    - condition: deepagents.enabled
+      name: deepagents
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.1
+    description: Umbrella chart bundling the Language Operator runtimes (openclaw,
+      opencode, claude-code, deepagents) as subcharts
+    digest: 001ebf9c98fe1a2d09dbae6f73f9405343e680394e29c6b64205ab3631995d01
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator-runtimes
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.2.0.tgz
+    version: 0.2.0
+  - apiVersion: v2
+    appVersion: 0.1.132
+    created: "2026-10-03T03:14:09.082537461Z"
+    dependencies:
+    - condition: claude-code.enabled
+      name: claude-code
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.3
+    - condition: openclaw.enabled
+      name: openclaw
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.0
+    - condition: opencode.enabled
+      name: opencode
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.3
+    - condition: deepagents.enabled
+      name: deepagents
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.1
+    description: Umbrella chart bundling the Language Operator runtimes (openclaw,
+      opencode, claude-code, deepagents) as subcharts
+    digest: 82d7cad1fc435cf78d89576f2910926ed8ec67cfe0a87c6a4c94670691b23630
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator-runtimes
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.1.132.tgz
+    version: 0.1.132
+  - apiVersion: v2
+    appVersion: 0.1.131
+    created: "2026-10-03T03:14:09.081641672Z"
+    dependencies:
+    - condition: claude-code.enabled
+      name: claude-code
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.3
+    - condition: openclaw.enabled
+      name: openclaw
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.0
+    - condition: opencode.enabled
+      name: opencode
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.3
+    description: Umbrella chart bundling the Language Operator runtimes (openclaw,
+      opencode, claude-code) as subcharts
+    digest: d49186e033364b756e1f24e1f79cbf4b5c076e97fddfbcdac2968a5ca71eab72
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator-runtimes
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.1.131.tgz
+    version: 0.1.131
+  - apiVersion: v2
+    appVersion: 0.1.130
+    created: "2026-10-03T03:14:09.080908598Z"
+    dependencies:
+    - condition: claude-code.enabled
+      name: claude-code
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.1
+    - condition: openclaw.enabled
+      name: openclaw
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.0
+    - condition: opencode.enabled
+      name: opencode
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.2
+    description: Umbrella chart bundling the Language Operator runtimes (openclaw,
+      opencode, claude-code) as subcharts
+    digest: 8ab58d738564a4108267904a90cb5b43d04eb2a8dfdfd51b23c2c3be58908beb
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator-runtimes
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.1.130.tgz
+    version: 0.1.130
+  - apiVersion: v2
+    appVersion: 0.1.129
+    created: "2026-10-03T03:14:09.080121022Z"
+    dependencies:
+    - condition: claude-code.enabled
+      name: claude-code
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.1
+    - condition: openclaw.enabled
+      name: openclaw
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.0
+    - condition: opencode.enabled
+      name: opencode
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.2
+    description: Umbrella chart bundling the Language Operator runtimes (openclaw,
+      opencode, claude-code) as subcharts
+    digest: a0bcf018719c5f82db7063af69184736019dea95a99beb8883aea601b161ba67
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator-runtimes
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.1.129.tgz
+    version: 0.1.129
+generated: "2026-10-03T03:14:08.323859712Z"
