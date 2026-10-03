@@ -14,5 +14,8 @@ dependencies:
 - name: kilo
   repository: oci://ghcr.io/language-operator/charts
   version: 0.1.0
-digest: sha256:bf054fb6013cd3ec35cdaab44ef7ab25fcf0257f362035ea778c69fc63b76304
-generated: "2026-10-03T02:23:22.983823671Z"
+- name: qwen-code
+  repository: oci://ghcr.io/language-operator/charts
+  version: 0.1.1
+digest: sha256:122aed4344ddd2d0a886e58d4a009107ac6d62e76a8748858785deff1b892210
+generated: "2026-10-03T02:37:23.391185339Z"
