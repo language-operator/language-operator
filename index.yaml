@@ -3,7 +3,7 @@ entries:
   language-operator:
   - apiVersion: v2
     appVersion: 0.3.14
-    created: "2026-10-03T02:50:09.886005926Z"
+    created: "2026-10-03T02:59:01.887939563Z"
     dependencies:
     - condition: argo-workflows.enabled
       name: argo-workflows
@@ -11,7 +11,7 @@ entries:
       version: 2.0.3
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
-    digest: 2547e62a6ff6659a45e0e9569044af89b3f8870a3f737c72cc3c94acdd19eb75
+    digest: 0c04215276955a126315b3fca037b2528aae0e6a0528eae02b3e98d96d19454c
     home: https://github.com/language-operator/language-operator
     keywords:
     - ai
@@ -32,7 +32,7 @@ entries:
   language-operator-runtimes:
   - apiVersion: v2
     appVersion: 0.3.14
-    created: "2026-10-03T02:50:09.887570515Z"
+    created: "2026-10-03T02:59:01.889586225Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -62,9 +62,13 @@ entries:
       name: cursor
       repository: oci://ghcr.io/language-operator/charts
       version: 0.1.1
+    - condition: goose.enabled
+      name: goose
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.1
     description: Umbrella chart bundling the Language Operator runtimes (openclaw,
-      opencode, claude-code, deepagents, kilo, qwen-code, cursor) as subcharts
-    digest: b9407da266f4335b8c09945b7fcf5e27239d48a757673d69044ed05413f1efa6
+      opencode, claude-code, deepagents, kilo, qwen-code, cursor, goose) as subcharts
+    digest: 427c50b747551495a20784f40c9ea031eb9bb8e5bb5416b6a4bc251c8fb28535
     home: https://github.com/language-operator/language-operator
     keywords:
     - ai
@@ -81,4 +85,4 @@ entries:
     urls:
     - https://language-operator.github.io/language-operator/language-operator-runtimes-0.3.14.tgz
     version: 0.3.14
-generated: "2026-10-03T02:50:09.870399048Z"
+generated: "2026-10-03T02:59:01.87599479Z"
