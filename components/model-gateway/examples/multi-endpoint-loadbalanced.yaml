@@ -1,15 +1,25 @@
+# Two LanguageModels with the same modelName: agents call the gateway by
+# modelName, so LiteLLM serves both as one model group and load-balances
+# requests across the two endpoints. Admission warns that the name is shared;
+# that is expected here.
 apiVersion: langop.io/v1alpha1
 kind: LanguageModel
 metadata:
-  name: gpt4
-  namespace: langop-system
+  name: llama-gpu-a
+  namespace: my-cluster
 spec:
-  provider: openai
-  modelName: gpt-4
-  apiKeySecretRef:
-    name: openai-credentials
-    key: api-key
+  provider: openai-compatible
+  modelName: llama3.2
+  endpoint: http://ollama-a.inference.svc.cluster.local:11434/v1
   timeout: "5m"
-  rateLimits:
-    requestsPerMinute: 300
-    tokensPerMinute: 300000
+---
+apiVersion: langop.io/v1alpha1
+kind: LanguageModel
+metadata:
+  name: llama-gpu-b
+  namespace: my-cluster
+spec:
+  provider: openai-compatible
+  modelName: llama3.2
+  endpoint: http://ollama-b.inference.svc.cluster.local:11434/v1
+  timeout: "5m"

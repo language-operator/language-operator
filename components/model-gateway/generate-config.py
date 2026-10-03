@@ -19,7 +19,8 @@ import os
 import sys
 import yaml
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from collections import Counter
+from typing import Any, Dict, Iterable, List, Optional
 
 
 def load_model_specs(models_dir: str = "/etc/langop/models",
@@ -179,8 +180,13 @@ def build_model_list(spec: Dict[str, Any], api_key: Optional[str]) -> List[Dict[
     return [model_entry]
 
 
-def build_litellm_settings(spec: Dict[str, Any]) -> Dict[str, Any]:
-    """Build litellm_settings for retries, fallbacks, etc."""
+def build_litellm_settings(providers: Iterable[str]) -> Dict[str, Any]:
+    """Build litellm_settings from the set of providers in the model list.
+
+    These settings are process-wide in LiteLLM, not per model, so they depend
+    only on which providers are present: one openai-compatible model loosens
+    validation for the whole gateway.
+    """
     settings: Dict[str, Any] = {}
 
     # Drop unknown/provider-specific params universally — agents (e.g. openclaw) may
@@ -188,8 +194,7 @@ def build_litellm_settings(spec: Dict[str, Any]) -> Dict[str, Any]:
     settings["drop_params"] = True
 
     # For openai-compatible providers, disable strict response validation
-    provider = spec.get("provider")
-    if provider in ["openai-compatible", "custom"]:
+    if any(p in ["openai-compatible", "custom"] for p in providers):
         settings["disable_strict_validation"] = True
         # Allow non-standard response fields
         settings["allowed_fails"] = 3
@@ -197,8 +202,22 @@ def build_litellm_settings(spec: Dict[str, Any]) -> Dict[str, Any]:
         # Disable internal health checks for local models to prevent request buildup
         settings["health_check_interval"] = 0
 
-    # Always return settings dict (even if mostly empty) for openai-compatible providers
     return settings
+
+
+def warn_shared_model_names(specs: List[Dict[str, Any]]) -> None:
+    """Say so when LanguageModels share a modelName.
+
+    Agents call the gateway by modelName, so LiteLLM serves every entry with
+    the same name as one model group and load-balances requests across them.
+    That is the way to spread a model over several endpoints, but it also
+    happens by accident, so make it visible in the gateway log.
+    """
+    counts = Counter(spec.get("modelName") for spec in specs)
+    for name, count in sorted(counts.items(), key=lambda kv: str(kv[0])):
+        if name and count > 1:
+            print(f"⚠ {count} LanguageModels share modelName {name!r}: requests for it are load-balanced across them",
+                  file=sys.stderr)
 
 
 def deep_merge(base: Dict[str, Any], extra: Dict[str, Any]) -> Dict[str, Any]:
@@ -264,14 +283,10 @@ def generate_litellm_config(specs: List[Dict[str, Any]]) -> Dict[str, Any]:
         api_key = load_api_key(spec.get("apiKeySecretRef"))
         all_models.extend(build_model_list(spec, api_key))
     config["model_list"] = all_models
+    warn_shared_model_names(specs)
 
-    # litellm_settings: merge across all specs (first writer wins per key)
-    merged_settings: Dict[str, Any] = {}
-    for spec in specs:
-        for k, v in build_litellm_settings(spec).items():
-            merged_settings.setdefault(k, v)
-    if merged_settings:
-        config["litellm_settings"] = merged_settings
+    if specs:
+        config["litellm_settings"] = build_litellm_settings(spec.get("provider") for spec in specs)
 
     general_settings: Dict[str, Any] = {"background_health_checks": False}
     config["general_settings"] = general_settings

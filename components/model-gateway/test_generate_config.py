@@ -176,3 +176,67 @@ class TestCustomAuth:
         key = custom_auth.agent_key("s3cret", "agent-a")
         forged = key.replace("agent-a", "agent-b")
         assert custom_auth.verify("s3cret", forged) is None
+
+
+class TestLitellmSettings:
+    build_litellm_settings = staticmethod(generate_config.build_litellm_settings)
+
+    def test_settings_depend_on_the_provider_set_not_the_order(self):
+        # Process-wide settings: one openai-compatible model loosens validation
+        # for the whole gateway, whichever spec happens to be read first.
+        local_first = self.build_litellm_settings(["openai-compatible", "anthropic"])
+        local_last = self.build_litellm_settings(["anthropic", "openai-compatible"])
+        assert local_first == local_last
+        assert local_first["disable_strict_validation"] is True
+        assert local_first["drop_params"] is True
+
+    def test_hosted_providers_only_get_drop_params(self):
+        assert self.build_litellm_settings(["anthropic", "openai"]) == {"drop_params": True}
+
+    def test_no_models_means_no_litellm_settings(self, monkeypatch):
+        monkeypatch.delenv("LANGOP_GATEWAY_EXTRA_CONFIG", raising=False)
+        monkeypatch.delenv("LANGOP_GATEWAY_HMAC_SECRET", raising=False)
+        assert "litellm_settings" not in generate_config.generate_litellm_config([])
+
+
+class TestSharedModelNames:
+    def test_shared_model_name_is_reported_as_load_balancing(self, capsys):
+        generate_config.warn_shared_model_names([
+            {"provider": "openai-compatible", "modelName": "llama3.2"},
+            {"provider": "openai-compatible", "modelName": "llama3.2"},
+            {"provider": "anthropic", "modelName": "claude-sonnet-4-5"},
+        ])
+        err = capsys.readouterr().err
+        assert "2 LanguageModels share modelName 'llama3.2'" in err
+        assert "load-balanced" in err
+        assert "claude-sonnet-4-5" not in err
+
+    def test_unique_model_names_are_quiet(self, capsys):
+        generate_config.warn_shared_model_names([{"modelName": "a"}, {"modelName": "b"}])
+        assert capsys.readouterr().err == ""
+
+
+class TestCustomAuthHook:
+    """The hook as LiteLLM calls it. Needs LiteLLM (and FastAPI) installed."""
+
+    @pytest.fixture(autouse=True)
+    def _litellm(self, monkeypatch):
+        pytest.importorskip("litellm")
+        monkeypatch.setenv("LANGOP_GATEWAY_HMAC_SECRET", "s3cret")
+        monkeypatch.delenv("LITELLM_MASTER_KEY", raising=False)
+
+    def call(self, key):
+        import asyncio
+        return asyncio.run(custom_auth.user_api_key_auth(None, key))
+
+    def test_bad_key_is_a_401_not_a_server_error(self):
+        # A plain exception becomes a 500 in LiteLLM >= 1.103 (see custom_auth.py).
+        from fastapi import HTTPException
+        with pytest.raises(HTTPException) as exc:
+            self.call("Bearer sk-langop-agent.bad")
+        assert exc.value.status_code == 401
+
+    def test_agent_key_authenticates_as_that_agent(self):
+        auth = self.call("Bearer " + custom_auth.agent_key("s3cret", "agent-a"))
+        assert auth.user_id == "agent-a"
+        assert auth.metadata == {"langop_agent_id": "agent-a"}

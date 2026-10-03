@@ -89,6 +89,32 @@ spec:
     - name: llama3          # fallback / secondary
 ```
 
+### Load balancing: models that share a `modelName`
+
+Agents call the gateway by `modelName`, not by the LanguageModel's own name. When several LanguageModels in a cluster have the same `modelName`, the gateway serves them as one model and spreads requests across all of them. Use this to run one model on several endpoints:
+
+```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageModel
+metadata:
+  name: llama-gpu-a
+spec:
+  provider: openai-compatible
+  modelName: llama3.2
+  endpoint: http://ollama-a.inference.svc.cluster.local:11434/v1
+---
+apiVersion: langop.io/v1alpha1
+kind: LanguageModel
+metadata:
+  name: llama-gpu-b
+spec:
+  provider: openai-compatible
+  modelName: llama3.2
+  endpoint: http://ollama-b.inference.svc.cluster.local:11434/v1
+```
+
+Because the same thing happens by accident, for example two models with the same `modelName` but different providers or keys, creating or updating a LanguageModel whose `modelName` is already taken returns a warning naming the other models, and the gateway logs one on start. Give each model a distinct `modelName` if you want them addressed separately.
+
 ## Rate Limiting
 
 ```yaml

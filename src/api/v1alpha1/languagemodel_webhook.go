@@ -18,6 +18,9 @@ package v1alpha1
 
 import (
 	"context"
+	"fmt"
+	"sort"
+	"strings"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,7 +44,7 @@ func (h *LanguageModelWebhook) ValidateCreate(ctx context.Context, m *LanguageMo
 	if err := h.validateClusterMembership(ctx, m.Namespace); err != nil {
 		return nil, err
 	}
-	return nil, nil
+	return h.sharedModelNameWarnings(ctx, m), nil
 }
 
 // ValidateUpdate implements admission.Validator
@@ -49,7 +52,42 @@ func (h *LanguageModelWebhook) ValidateUpdate(ctx context.Context, _, m *Languag
 	if err := h.validateClusterMembership(ctx, m.Namespace); err != nil {
 		return nil, err
 	}
-	return nil, nil
+	return h.sharedModelNameWarnings(ctx, m), nil
+}
+
+// sharedModelNameWarnings warns when another LanguageModel in the cluster has the
+// same modelName. Agents call the gateway by modelName, so the gateway serves them
+// as one model and load-balances across both. That is how to spread a model over
+// several endpoints, so it is allowed; but it also happens by accident, so say so.
+// A failed lookup adds no warning rather than blocking the request.
+func (h *LanguageModelWebhook) sharedModelNameWarnings(ctx context.Context, m *LanguageModel) admission.Warnings {
+	if m.Spec.ModelName == "" {
+		return nil
+	}
+	models := &LanguageModelList{}
+	if err := h.listReader().List(ctx, models, client.InNamespace(m.Namespace)); err != nil {
+		return nil
+	}
+	var others []string
+	for _, other := range models.Items {
+		if other.Name != m.Name && other.Spec.ModelName == m.Spec.ModelName {
+			others = append(others, other.Name)
+		}
+	}
+	if len(others) == 0 {
+		return nil
+	}
+	sort.Strings(others)
+	return admission.Warnings{fmt.Sprintf(
+		"LanguageModel(s) %s already use modelName %q: the gateway load-balances requests for %q across all of them",
+		strings.Join(others, ", "), m.Spec.ModelName, m.Spec.ModelName)}
+}
+
+func (h *LanguageModelWebhook) listReader() client.Reader {
+	if h.reader != nil {
+		return h.reader
+	}
+	return h.Client
 }
 
 // ValidateDelete implements admission.Validator
@@ -58,11 +96,7 @@ func (h *LanguageModelWebhook) ValidateDelete(_ context.Context, _ *LanguageMode
 }
 
 func (h *LanguageModelWebhook) validateClusterMembership(ctx context.Context, namespace string) error {
-	r := client.Reader(h.reader)
-	if r == nil {
-		r = h.Client
-	}
-	return validateClusterMembership(ctx, r, namespace)
+	return validateClusterMembership(ctx, h.listReader(), namespace)
 }
 
 // SetupLanguageModelWebhookWithManager registers the LanguageModel validating webhook.

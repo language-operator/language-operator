@@ -9,11 +9,12 @@ Bring all packages, Docker base images, and adapter dependencies up to date.
 | Go modules | `src/go.mod`, `src/go.sum` | `go get -u`, `go mod tidy` |
 | Node — hooks | `.claude/hooks/package.json` | `npm update` |
 | Docker base images | `Dockerfile`, `components/*/Dockerfile` | manual edit |
+| LiteLLM (model gateway) | `components/model-gateway/Dockerfile` (`litellm[proxy]==…`) | manual edit |
+| Go build tools | `src/Makefile` vars | manual edit |
+| GitHub Actions | `.github/workflows/*.yaml` | manual edit |
 
 > Runtime adapters (claude-code, openclaw, opencode, deepagents) now live in their own
 > repositories and manage their own dependencies — they are out of scope here.
-| Go build tools | `src/Makefile` vars | manual edit |
-| GitHub Actions | `.github/workflows/*.yaml` | manual edit |
 
 ---
 
@@ -84,6 +85,28 @@ docker pull --quiet python:3.11-slim 2>&1 | tail -1 || true
 - `gcr.io/distroless/static:nonroot` — no change needed; `nonroot` tag always tracks latest.
 
 Report which images need manual version bumps and show the exact `FROM` line to replace. Do **not** edit Dockerfiles automatically — show the proposed change and ask for confirmation.
+
+---
+
+## Step 4b — Check the gateway's LiteLLM pin
+
+LiteLLM supports only its four most recent stable minor lines, so this pin goes out of
+support within weeks. Compare the pin with the latest stable release:
+
+```bash
+grep -o 'litellm\[proxy\]==[0-9.]*' components/model-gateway/Dockerfile
+curl -s https://pypi.org/pypi/litellm/json | jq -r .info.version
+```
+
+When bumping it:
+- Edit only the version in the Dockerfile; CI's `python-test` job reads the pin from there.
+- Run the gateway tests against the new version in a throwaway venv:
+  `pip install pytest pyyaml "litellm[proxy]==<new>" && pytest components/model-gateway/ -v`.
+  `TestCustomAuthHook` checks that a bad agent key is still a 401; LiteLLM 1.103 turned a
+  plain exception from the auth hook into a 500.
+- Read the release notes between the two versions for proxy, auth and router changes, and
+  report anything that touches `general_settings.custom_auth`, `litellm_settings` keys used in
+  `generate-config.py`, or the providers in `map_provider_to_litellm`.
 
 ---
 
@@ -189,6 +212,7 @@ Automated changes committed:
 
 Pending manual review:
   • Docker base images: <list images with suggested bumps>
+  • LiteLLM (gateway): <current pin> → <latest stable>, if behind
   • Go build tools: <list tools with newer versions>
   • GitHub Actions: <list actions with newer major versions>
 
