@@ -2101,7 +2101,7 @@
 </tr>
 <tr>
 <td><code>status.lastRunName</code> / <code>lastRunPhase</code></td>
-<td>The most recent run and its Argo phase</td>
+<td>The most recent run and its Argo phase. Every run of the agent's template counts, however it was started (schedule, <code>argo submit --from</code>, another controller), including one still <code>Pending</code></td>
 </tr>
 <tr>
 <td><code>status.lastRunStartedAt</code> / <code>lastRunFinishedAt</code></td>
