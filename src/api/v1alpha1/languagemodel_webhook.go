@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -41,19 +42,88 @@ var _ admission.Validator[*LanguageModel] = &LanguageModelWebhook{}
 
 // ValidateCreate implements admission.Validator
 func (h *LanguageModelWebhook) ValidateCreate(ctx context.Context, m *LanguageModel) (admission.Warnings, error) {
-	if err := h.validateClusterMembership(ctx, m.Namespace); err != nil {
-		return nil, err
-	}
-	return h.sharedModelNameWarnings(ctx, m), nil
+	return h.validate(ctx, m)
 }
 
 // ValidateUpdate implements admission.Validator
 func (h *LanguageModelWebhook) ValidateUpdate(ctx context.Context, _, m *LanguageModel) (admission.Warnings, error) {
+	return h.validate(ctx, m)
+}
+
+func (h *LanguageModelWebhook) validate(ctx context.Context, m *LanguageModel) (admission.Warnings, error) {
 	if err := h.validateClusterMembership(ctx, m.Namespace); err != nil {
 		return nil, err
 	}
-	return h.sharedModelNameWarnings(ctx, m), nil
+	if err := validateModelSpec(&m.Spec); err != nil {
+		return nil, err
+	}
+	warnings := h.sharedModelNameWarnings(ctx, m)
+	if m.Spec.Provider == "custom" {
+		warnings = append(warnings, `provider "custom" is deprecated and behaves exactly like "openai-compatible"; use that instead`)
+	}
+	return warnings, nil
 }
+
+// credentialParams are LiteLLM params that carry secrets. They come from
+// credentialsSecretRef or apiKeySecretRef, never from spec.params, so a secret
+// cannot end up stored in the LanguageModel itself.
+var credentialParams = map[string]bool{
+	"api_key": true, "azure_ad_token": true, "client_secret": true, "azure_password": true,
+	"aws_access_key_id": true, "aws_secret_access_key": true, "aws_session_token": true,
+	"aws_web_identity_token": true, "vertex_credentials": true,
+}
+
+// validateModelSpec checks what each provider needs to reach its API. The CRD
+// schema already enforces that exactly one of provider/litellmProvider is set.
+func validateModelSpec(s *LanguageModelSpec) error {
+	var errs []string
+	param := func(key string) bool { _, ok := s.Params[key]; return ok }
+
+	keys := make([]string, 0, len(s.Params))
+	for k := range s.Params {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		if !paramKeyPattern.MatchString(k) {
+			errs = append(errs, fmt.Sprintf("params key %q must match %s", k, paramKeyPattern))
+		}
+		if credentialParams[k] {
+			errs = append(errs, fmt.Sprintf("params key %q is a credential: put it in the Secret named by credentialsSecretRef", k))
+		}
+	}
+
+	switch s.Provider {
+	case "openai-compatible", "custom", "azure":
+		if s.Endpoint == "" {
+			errs = append(errs, fmt.Sprintf("provider %q requires endpoint", s.Provider))
+		}
+	}
+	switch s.Provider {
+	case "azure":
+		if s.APIVersion == "" && !param("api_version") {
+			errs = append(errs, `provider "azure" requires apiVersion (or params.api_version)`)
+		}
+	case "bedrock":
+		if s.Region == "" && !param("aws_region_name") {
+			errs = append(errs, `provider "bedrock" requires region (or params.aws_region_name)`)
+		}
+	case "vertex":
+		if s.Project == "" && !param("vertex_project") {
+			errs = append(errs, `provider "vertex" requires project (or params.vertex_project)`)
+		}
+		if s.Location == "" && !param("vertex_location") {
+			errs = append(errs, `provider "vertex" requires location (or params.vertex_location)`)
+		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("invalid LanguageModel spec: %s", strings.Join(errs, "; "))
+	}
+	return nil
+}
+
+var paramKeyPattern = regexp.MustCompile(`^[a-z0-9_]+$`)
 
 // sharedModelNameWarnings warns when another LanguageModel in the cluster has the
 // same modelName. Agents call the gateway by modelName, so the gateway serves them

@@ -83,19 +83,89 @@ def load_api_key(secret_ref: Optional[Dict[str, str]]) -> Optional[str]:
     return None
 
 
-def map_provider_to_litellm(provider: str, model_name: str, endpoint: Optional[str] = None) -> str:
-    """Map LanguageModel provider to LiteLLM model format."""
-    provider_map = {
-        "openai": model_name,
-        "anthropic": model_name,
-        "azure": f"azure/{model_name}",
-        "bedrock": f"bedrock/{model_name}",
-        "vertex": f"vertex_ai/{model_name}",
-        "openai-compatible": f"openai/{model_name}",  # Use openai/ for generic OpenAI-compatible endpoints
-        "custom": model_name,
-    }
+# provider -> LiteLLM model prefix. openai stays unprefixed (LiteLLM's default);
+# custom is the deprecated spelling of openai-compatible.
+PROVIDER_PREFIX = {
+    "openai": None,
+    "anthropic": "anthropic",
+    "gemini": "gemini",
+    "azure": "azure",
+    "bedrock": "bedrock",
+    "vertex": "vertex_ai",
+    "openai-compatible": "openai",
+    "custom": "openai",
+}
 
-    return provider_map.get(provider, model_name)
+# Backends reached through the OpenAI chat-completions API that may not serve
+# the Responses API (Ollama, vLLM, LM Studio...).
+OPENAI_COMPATIBLE = ("openai-compatible", "custom")
+
+
+def map_provider_to_litellm(provider: Optional[str], model_name: str,
+                            litellm_provider: Optional[str] = None) -> str:
+    """The LiteLLM model string: "<prefix>/<modelName>".
+
+    A modelName that already carries the prefix is left alone.
+    """
+    prefix = litellm_provider if not provider else PROVIDER_PREFIX.get(provider)
+    if not prefix or model_name.startswith(prefix + "/"):
+        return model_name
+    return f"{prefix}/{model_name}"
+
+
+# Secret key -> LiteLLM param, for credentialsSecretRef. Env-style names are the
+# ones each provider's own docs use; LiteLLM's own param names also work as-is.
+CREDENTIAL_KEYS = {
+    "api-key": "api_key",
+    "API_KEY": "api_key",
+    "AWS_ACCESS_KEY_ID": "aws_access_key_id",
+    "AWS_SECRET_ACCESS_KEY": "aws_secret_access_key",
+    "AWS_SESSION_TOKEN": "aws_session_token",
+    "AWS_BEARER_TOKEN_BEDROCK": "api_key",  # LiteLLM sends a Bedrock model's api_key as the bearer token
+    "AZURE_API_KEY": "api_key",
+    "AZURE_AD_TOKEN": "azure_ad_token",
+    "AZURE_TENANT_ID": "tenant_id",
+    "AZURE_CLIENT_ID": "client_id",
+    "AZURE_CLIENT_SECRET": "client_secret",
+    "GEMINI_API_KEY": "api_key",
+}
+CREDENTIAL_PARAMS = {
+    "api_key", "aws_access_key_id", "aws_secret_access_key", "aws_session_token",
+    "azure_ad_token", "tenant_id", "client_id", "client_secret",
+}
+# Keys holding a service-account JSON. Passed to LiteLLM as the file path, so the
+# JSON never lands in the generated config.
+VERTEX_CREDENTIAL_KEYS = {
+    "VERTEX_CREDENTIALS", "GOOGLE_APPLICATION_CREDENTIALS", "vertex_credentials",
+    "service-account.json", "credentials.json",
+}
+
+
+def load_credentials(secret_ref: Optional[Dict[str, str]],
+                     secrets_dir: str = "/etc/secrets") -> Dict[str, Any]:
+    """LiteLLM params from a credentialsSecretRef Secret, mounted whole at
+    <secrets_dir>/<name>/. Unknown keys are skipped by name; values are never logged.
+    """
+    if not secret_ref:
+        return {}
+    name = secret_ref.get("name")
+    directory = Path(secrets_dir) / name
+    if not directory.is_dir():
+        print(f"⚠ Credentials secret not mounted: {name}", file=sys.stderr)
+        return {}
+
+    params: Dict[str, Any] = {}
+    # Kubernetes mounts each key as a symlink into a hidden ..data directory.
+    for path in sorted(p for p in directory.iterdir() if not p.name.startswith("..")):
+        key = path.name
+        if key in VERTEX_CREDENTIAL_KEYS:
+            params["vertex_credentials"] = str(path)
+        elif key in CREDENTIAL_KEYS or key in CREDENTIAL_PARAMS:
+            params[CREDENTIAL_KEYS.get(key, key)] = path.read_text().strip()
+        else:
+            print(f"⚠ Ignoring unrecognised key {key!r} in credentials secret {name}", file=sys.stderr)
+    print(f"✓ Loaded credentials from secret {name} ({', '.join(sorted(params))})", file=sys.stderr)
+    return params
 
 
 def parse_duration_to_seconds(timeout_str: str) -> float:
@@ -122,8 +192,13 @@ def parse_duration_to_seconds(timeout_str: str) -> float:
     return 300.0  # default 5 minutes
 
 
-def build_litellm_params(spec: Dict[str, Any], api_key: Optional[str]) -> Dict[str, Any]:
-    """Build litellm_params from LanguageModel spec."""
+def build_litellm_params(spec: Dict[str, Any], api_key: Optional[str],
+                         credentials: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Build litellm_params from LanguageModel spec.
+
+    Precedence, lowest first: credentials from credentialsSecretRef, the
+    apiKeySecretRef key, the typed fields (region, project, ...), then spec.params.
+    """
     params: Dict[str, Any] = {}
 
     provider = spec.get("provider")
@@ -131,38 +206,52 @@ def build_litellm_params(spec: Dict[str, Any], api_key: Optional[str]) -> Dict[s
     endpoint = spec.get("endpoint")
 
     # Set the model
-    params["model"] = map_provider_to_litellm(provider, model_name, endpoint)
+    params["model"] = map_provider_to_litellm(provider, model_name, spec.get("litellmProvider"))
 
     # Set API base/endpoint
     if endpoint:
         # For openai-compatible providers, ensure endpoint ends with /v1
-        if provider in ["openai-compatible", "custom"] and not endpoint.endswith("/v1"):
+        if provider in OPENAI_COMPATIBLE and not endpoint.endswith("/v1"):
             params["api_base"] = f"{endpoint.rstrip('/')}/v1"
         else:
             params["api_base"] = endpoint
 
-    # For openai-compatible providers, explicitly set custom_llm_provider to avoid strict validation
-    if provider in ["openai-compatible", "custom"]:
+    if provider in OPENAI_COMPATIBLE:
+        # Explicitly OpenAI-style, to avoid strict validation.
         params["custom_llm_provider"] = "openai"
+        # Serve /v1/responses by translating to chat completions: these backends
+        # often have no Responses API, and LiteLLM would otherwise forward the
+        # request to their (missing) /v1/responses and get a 404.
+        params["use_chat_completions_api"] = True
+
+    params.update(credentials or {})
 
     # Set API key - use dummy for local/compatible endpoints without auth
     if api_key:
         params["api_key"] = api_key
-    elif provider in ["openai-compatible", "custom"]:
+    elif provider in OPENAI_COMPATIBLE and "api_key" not in params:
         # Local LLM servers (LM Studio, Ollama, etc.) don't need auth but litellm requires the field
         params["api_key"] = "sk-local-dummy-key"
+
+    for field, param in (("region", "aws_region_name"), ("project", "vertex_project"),
+                         ("location", "vertex_location"), ("apiVersion", "api_version")):
+        if spec.get(field):
+            params[param] = spec[field]
 
     # Add timeout
     if spec.get("timeout"):
         params["timeout"] = parse_duration_to_seconds(spec["timeout"])
 
+    params.update(spec.get("params") or {})
+
     return params
 
 
-def build_model_list(spec: Dict[str, Any], api_key: Optional[str]) -> List[Dict[str, Any]]:
+def build_model_list(spec: Dict[str, Any], api_key: Optional[str],
+                     credentials: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
     """Build the model_list section for LiteLLM config."""
     model_name = spec.get("modelName")
-    litellm_params = build_litellm_params(spec, api_key)
+    litellm_params = build_litellm_params(spec, api_key, credentials)
 
     model_entry: Dict[str, Any] = {
         "model_name": model_name,
@@ -194,7 +283,12 @@ def build_litellm_settings(providers: Iterable[str]) -> Dict[str, Any]:
     settings["drop_params"] = True
 
     # For openai-compatible providers, disable strict response validation
-    if any(p in ["openai-compatible", "custom"] for p in providers):
+    if any(p in OPENAI_COMPATIBLE for p in providers):
+        # Send /v1/messages for OpenAI-provider models to chat completions. By
+        # default LiteLLM routes it through the Responses API, which these
+        # backends lack (and which, bridged, drops the reply text). Process-wide,
+        # so it also covers a real openai model, which serves chat completions fully.
+        settings["use_chat_completions_url_for_anthropic_messages"] = True
         settings["disable_strict_validation"] = True
         # Allow non-standard response fields
         settings["allowed_fails"] = 3
@@ -281,12 +375,13 @@ def generate_litellm_config(specs: List[Dict[str, Any]]) -> Dict[str, Any]:
     all_models: List[Dict[str, Any]] = []
     for spec in specs:
         api_key = load_api_key(spec.get("apiKeySecretRef"))
-        all_models.extend(build_model_list(spec, api_key))
+        credentials = load_credentials(spec.get("credentialsSecretRef"))
+        all_models.extend(build_model_list(spec, api_key, credentials))
     config["model_list"] = all_models
     warn_shared_model_names(specs)
 
     if specs:
-        config["litellm_settings"] = build_litellm_settings(spec.get("provider") for spec in specs)
+        config["litellm_settings"] = build_litellm_settings(spec.get("provider") or spec.get("litellmProvider") for spec in specs)
 
     general_settings: Dict[str, Any] = {"background_health_checks": False}
     config["general_settings"] = general_settings

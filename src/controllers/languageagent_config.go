@@ -144,7 +144,7 @@ func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent 
 		}
 		cfg.Models[modelRef.Name] = modelConfigYAML{
 			Role:     modelRef.Role,
-			Provider: model.Spec.Provider,
+			Provider: model.Spec.EffectiveProvider(),
 			Model:    model.Spec.ModelName,
 			Endpoint: gatewayURL,
 			Priority: modelRef.Priority,

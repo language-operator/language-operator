@@ -164,7 +164,7 @@ The proxy supports 100+ providers through LiteLLM. Most common providers:
 
 ### Custom Endpoints
 - **OpenAI-Compatible** - `provider: openai-compatible`
-- **Custom** - `provider: custom`
+- **Any other LiteLLM provider** - `litellmProvider: <prefix>` (e.g. `deepseek`, `dashscope`); `provider: custom` is deprecated (same as `openai-compatible`)
 
 See [examples/](examples/) for provider-specific configurations.
 
