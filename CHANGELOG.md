@@ -8,6 +8,19 @@ This document tracks releases of the Language Operator project.
 
 ---
 
+## v0.3.13 — 2026-10-03
+
+**Features**
+- per-run inputs for task agents (AGENT_EVENT, /etc/agent/event.json, AGENT_TRIGGER) (#953)
+
+**Bug Fixes**
+- track task runs the controller didn't create (#960)
+
+**Chores**
+- update runtime subchart pins (#951)
+
+---
+
 ## v0.3.12 — 2026-10-01
 
 **Features**
