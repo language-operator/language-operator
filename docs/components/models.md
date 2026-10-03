@@ -1,6 +1,8 @@
 # Models
 
-A `LanguageModel` configures LLM access for a `LanguageCluster`. The operator reads all `LanguageModel` resources in the namespace and registers them with the cluster's shared LiteLLM gateway — agents never hold API credentials or connect to model providers directly.
+A `LanguageModel` configures LLM access for a `LanguageCluster`. The operator reads all `LanguageModel` resources in the namespace and registers them with the cluster's shared LiteLLM gateway. Agents on gateway-backed runtimes never hold provider credentials or connect to providers directly: they call the gateway with their own gateway key.
+
+The exception is **vendor-key runtimes** — [Claude Code](../runtimes/claude-code.md) and [Cursor](../runtimes/cursor.md) — which talk to their vendor directly with the vendor's own key and do not use the gateway or `LanguageModel`s at all.
 
 ## How It Works
 
@@ -95,6 +97,36 @@ spec:
 
 `custom` is deprecated and behaves exactly like `openai-compatible`. Providers that need more than one credential (Bedrock access keys, a Vertex service account, an Azure AD app) take a whole Secret through `credentialsSecretRef`, applied to that model only. See [LanguageModel](../api/languagemodel.md#providers) for each provider's fields and examples.
 
+### Other providers
+
+Anything LiteLLM supports is reachable with `litellmProvider`, its LiteLLM provider prefix, plus the provider's API key. LiteLLM knows each one's base URL, so `endpoint` is only needed to override it:
+
+| Provider | `litellmProvider` |
+|----------|-------------------|
+| DeepSeek | `deepseek` |
+| Z.ai (GLM) | `zai` |
+| Moonshot (Kimi) | `moonshot` |
+| MiniMax | `minimax` |
+| xAI (Grok) | `xai` |
+| Mistral | `mistral` |
+| Groq | `groq` |
+| Together AI | `together_ai` |
+| Fireworks AI | `fireworks_ai` |
+| OpenRouter | `openrouter` |
+| Alibaba Qwen (DashScope) | `dashscope` |
+| Cerebras | `cerebras` |
+| Perplexity | `perplexity` |
+
+```yaml
+spec:
+  litellmProvider: deepseek
+  modelName: deepseek-chat
+  apiKeySecretRef:
+    name: deepseek-credentials
+```
+
+See [LiteLLM's provider list](https://docs.litellm.ai/docs/providers) for the rest. Every [example](https://github.com/language-operator/language-operator/tree/main/components/model-gateway/examples) in the repository is a complete, CI-validated spec.
+
 ### Self-hosted models (Ollama, vLLM)
 
 ```yaml
@@ -104,7 +136,15 @@ spec:
   endpoint: http://ollama.default.svc.cluster.local:11434/v1
 ```
 
-No `apiKeySecretRef` needed for unauthenticated endpoints.
+No `apiKeySecretRef` needed for unauthenticated endpoints. The same shape works for any server with an OpenAI-compatible API; their usual defaults:
+
+| Server | `endpoint` (default port) |
+|--------|---------------------------|
+| Ollama | `http://<host>:11434/v1` |
+| vLLM | `http://<host>:8000/v1` |
+| llama.cpp (`llama-server`) | `http://<host>:8080/v1` |
+| SGLang | `http://<host>:30000/v1` |
+| LM Studio | `http://<host>:1234/v1` |
 
 The backend only needs `/v1/chat/completions`. Clients that speak the Responses API (`/v1/responses`, e.g. Codex) or the Anthropic Messages API (`/v1/messages`) still work: the gateway translates both to chat completions for these models.
 
@@ -145,6 +185,26 @@ spec:
 ```
 
 Because the same thing happens by accident, for example two models with the same `modelName` but different providers or keys, creating or updating a LanguageModel whose `modelName` is already taken returns a warning naming the other models, and the gateway logs one on start. Give each model a distinct `modelName` if you want them addressed separately.
+
+## Advanced: Extra Gateway Configuration
+
+For LiteLLM settings with no `LanguageModel` field (retries, fallbacks, caching, spend callbacks, or a hand-written model entry) set `LANGOP_GATEWAY_EXTRA_CONFIG` on the gateway. It is a YAML mapping deep-merged into the generated LiteLLM config: mappings merge recursively, lists and scalars replace.
+
+```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageCluster
+spec:
+  gateway:
+    deployment:
+      env:
+        - name: LANGOP_GATEWAY_EXTRA_CONFIG
+          value: |
+            litellm_settings:
+              num_retries: 2
+              request_timeout: 600
+```
+
+A list such as `model_list` replaces the generated one entirely, so prefer `LanguageModel`s for models. A value that is not a mapping stops the gateway from starting.
 
 ## Rate Limiting
 

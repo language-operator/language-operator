@@ -1,6 +1,6 @@
 # langop/model
 
-High-performance AI gateway proxy for [language-operator](../../kubernetes/language-operator/) LanguageModel CRDs. Powered by [LiteLLM](https://docs.litellm.ai/), this container provides a unified OpenAI-compatible API for 100+ language model providers with built-in rate limiting, load balancing, and observability.
+The model gateway for [language-operator](../../README.md): one per LanguageCluster, serving every `LanguageModel` in the cluster's namespace. Powered by [LiteLLM](https://docs.litellm.ai/), it gives agents one OpenAI-compatible endpoint (plus `/v1/responses` and `/v1/messages`) in front of any provider LiteLLM supports, with per-model rate limits and per-agent keys.
 
 ## Architecture
 
@@ -14,7 +14,7 @@ High-performance AI gateway proxy for [language-operator](../../kubernetes/langu
            ▼
 ┌─────────────────────┐
 │   ConfigMap         │
-│   (model.json)      │
+│   (gateway-config)  │
 └──────────┬──────────┘
            │
            │ Mounted as volume
@@ -35,15 +35,12 @@ High-performance AI gateway proxy for [language-operator](../../kubernetes/langu
 
 ## Features
 
-- 🚀 **100+ Provider Support** - OpenAI, Anthropic, Azure, Ollama, Bedrock, Vertex AI, and more
-- 🔒 **Rate Limiting** - Per-model request and token limits (enforced by LiteLLM)
-- ⚖️ **Load Balancing** - Distribute requests across multiple endpoints
-- 🔄 **Automatic Retries** - Configurable exponential backoff
-- 💾 **Response Caching** - Reduce costs and latency with intelligent caching
-- 📊 **Observability** - Prometheus metrics, distributed tracing, structured logging
-- 🎯 **Fallback Models** - Automatic failover to backup models
-- 💰 **Cost Tracking** - Monitor token usage and costs per model
-- 🔌 **OpenAI Compatible** - Works with any OpenAI SDK or client library
+- **Any LiteLLM provider** - first-class `provider` values for OpenAI, Anthropic, Gemini, Azure, Bedrock, Vertex and OpenAI-compatible servers; anything else by `litellmProvider`
+- **Per-agent keys** - every agent gets its own key; calls without a valid key are rejected, and usage is attributed per agent
+- **Rate limiting** - per-model request and token limits (`spec.rateLimits`)
+- **Load balancing** - LanguageModels sharing a `modelName` form one load-balanced group
+- **OpenAI, Responses and Anthropic APIs** - `/v1/chat/completions`, `/v1/responses` and `/v1/messages` for every model
+- **Anything else LiteLLM offers** (retries, fallbacks, caching, spend callbacks) through `LANGOP_GATEWAY_EXTRA_CONFIG`; none of it is on by default
 
 ## Quick Start
 
@@ -61,11 +58,11 @@ Create a LanguageModel resource:
 apiVersion: langop.io/v1alpha1
 kind: LanguageModel
 metadata:
-  name: gpt-4
-  namespace: langop-system
+  name: gpt-4o
+  namespace: my-cluster      # your LanguageCluster's namespace
 spec:
   provider: openai
-  modelName: gpt-4-turbo-preview
+  modelName: gpt-4o
   apiKeySecretRef:
     name: openai-credentials
     key: api-key
@@ -74,26 +71,23 @@ spec:
     tokensPerMinute: 100000
 ```
 
-The language-operator will:
-1. Create a ConfigMap with the model spec at `/etc/langop/model.json`
-2. Deploy the `langop/model` proxy container
-3. Mount the ConfigMap and Secret
-4. Create a Service for accessing the proxy
+The language-operator adds the model to the cluster's `gateway-config` ConfigMap (one `model__<name>.json` per LanguageModel, mounted at `/etc/langop/models/`), mounts the Secrets it references, and rolls the shared `gateway` Deployment. One gateway serves every model in the namespace, at `http://gateway.<namespace>.svc.cluster.local:8000`.
 
 ### 3. Use from Agents/Clients
 
-Connect to the proxy using any OpenAI SDK:
+Inside an agent, the operator injects `MODEL_ENDPOINT` (the gateway URL) and `MODEL_API_KEY` (the agent's own gateway key). Use them with any OpenAI SDK; ask for the model by its `modelName`:
 
 ```python
+import os
 from openai import OpenAI
 
 client = OpenAI(
-    base_url="http://gpt-4.langop-system.svc.cluster.local:4000/v1",
-    api_key="not-needed"  # Key is already configured in proxy
+    base_url=os.environ["MODEL_ENDPOINT"] + "/v1",
+    api_key=os.environ["MODEL_API_KEY"],  # calls without a valid key get 401
 )
 
 response = client.chat.completions.create(
-    model="gpt-4-turbo-preview",
+    model="gpt-4o",
     messages=[{"role": "user", "content": "Hello!"}]
 )
 ```
@@ -104,10 +98,14 @@ The proxy automatically generates LiteLLM configuration from the LanguageModel C
 
 | LanguageModel Field | LiteLLM Mapping | Description |
 |---------------------|-----------------|-------------|
-| `spec.provider` | `litellm_params.model` | Provider prefix (e.g., `azure/`, `openai/`) |
-| `spec.modelName` | `model_name` | Model identifier |
+| `spec.provider` | `litellm_params.model` prefix | `anthropic/`, `gemini/`, `azure/`, `bedrock/`, `vertex_ai/`, `openai/` (openai-compatible); `openai` stays unprefixed |
+| `spec.litellmProvider` | `litellm_params.model` prefix | Any LiteLLM provider prefix, instead of `provider` |
+| `spec.modelName` | `model_name` | Model identifier (what agents ask for) |
 | `spec.endpoint` | `litellm_params.api_base` | Custom endpoint URL |
-| `spec.apiKeySecretRef` | `litellm_params.api_key` | API key from secret |
+| `spec.apiKeySecretRef` | `litellm_params.api_key` | One key from a Secret |
+| `spec.credentialsSecretRef` | per-key `litellm_params` | A whole Secret: AWS keys or bearer token, Vertex service account (as a file path), Azure AD app, API key |
+| `spec.region` / `project` / `location` / `apiVersion` | `aws_region_name` / `vertex_project` / `vertex_location` / `api_version` | Provider settings |
+| `spec.params` | `litellm_params.*` | Anything else, typed; overrides the fields above |
 | `spec.rateLimits.requestsPerMinute` | `rpm` | Request rate limit |
 | `spec.rateLimits.tokensPerMinute` | `tpm` | Token rate limit |
 | `spec.timeout` | `litellm_params.timeout` | Request timeout (Go duration, e.g. `5m`) |
@@ -116,16 +114,14 @@ LanguageModels that share a `spec.modelName` become one `model_name` group, whic
 
 ## Operator-level settings (environment)
 
-Two optional environment variables on the gateway Deployment (set through
-`LanguageCluster.spec.gateway.deployment.env`) shape the generated config without a
-new image. Both default to off.
+Two environment variables on the gateway Deployment shape the generated config without a new image.
 
 | Variable | Effect |
 |---|---|
-| `LANGOP_GATEWAY_EXTRA_CONFIG` | A YAML mapping deep-merged into the generated LiteLLM config: mappings merge recursively, lists and scalars replace. Use it for spend callbacks, a master key, or any other LiteLLM setting. Anything that is not a mapping fails startup. |
-| `LANGOP_GATEWAY_HMAC_SECRET` | Enables stateless per-agent API keys through `custom_auth.py`. A key is `sk-langop-<agent-id>.<signature>` with the signature the first 32 hex characters of HMAC-SHA256(secret, agent-id); the agent id becomes the request's LiteLLM user id, so callbacks attribute usage per agent. The proxy's `LITELLM_MASTER_KEY` keeps working alongside. |
+| `LANGOP_GATEWAY_EXTRA_CONFIG` | Optional; set through `LanguageCluster.spec.gateway.deployment.env`. A YAML mapping deep-merged into the generated LiteLLM config: mappings merge recursively, lists and scalars replace. Use it for spend callbacks, retries, fallbacks, caching, or any other LiteLLM setting. Anything that is not a mapping fails startup. |
+| `LANGOP_GATEWAY_HMAC_SECRET` | **Set by the operator** from the Secret `gateway-auth` in the cluster namespace. Turns on per-agent keys through `custom_auth.py`: a key is `sk-langop-<agent-id>.<signature>`, the signature the first 32 hex characters of HMAC-SHA256(secret, agent-id), and the agent id becomes the request's LiteLLM user id. The operator gives every agent its key as `MODEL_API_KEY`; calls without a valid key get 401. A `LITELLM_MASTER_KEY` you set keeps working alongside, for admin and external access. |
 
-Example: spend callbacks to a control plane plus per-agent keys.
+Example: a master key for admin access, plus spend callbacks to a control plane. Per-agent keys need no configuration.
 
 ```yaml
 spec:
@@ -133,9 +129,7 @@ spec:
     deployment:
       env:
         - name: LITELLM_MASTER_KEY
-          value: sk-placeholder
-        - name: LANGOP_GATEWAY_HMAC_SECRET
-          valueFrom: {secretKeyRef: {name: gateway-auth, key: hmac-secret}}
+          valueFrom: {secretKeyRef: {name: gateway-master-key, key: key}}
         - name: GENERIC_LOGGER_ENDPOINT
           value: https://cloud.example.com/hooks/litellm/<token>
         - name: LANGOP_GATEWAY_EXTRA_CONFIG
@@ -147,7 +141,7 @@ spec:
 
 ## Supported Providers
 
-The proxy supports 100+ providers through LiteLLM. Most common providers:
+Every provider LiteLLM supports is reachable. These have first-class `provider` values; anything else uses `litellmProvider`:
 
 ### Cloud Providers
 - **OpenAI** - `provider: openai`
@@ -155,6 +149,7 @@ The proxy supports 100+ providers through LiteLLM. Most common providers:
 - **Azure OpenAI** - `provider: azure`
 - **AWS Bedrock** - `provider: bedrock`
 - **Google Vertex AI** - `provider: vertex`
+- **Google AI Studio (Gemini API)** - `provider: gemini`
 
 ### Local/Self-Hosted
 - **Ollama** - `provider: openai-compatible`, `endpoint: http://ollama:11434/v1`
@@ -219,13 +214,11 @@ See [examples/ollama-local.yaml](examples/ollama-local.yaml)
 ```yaml
 spec:
   provider: azure
-  modelName: gpt-4-deployment
-  endpoint: https://your-resource.openai.azure.com/
+  modelName: my-gpt4o-deployment        # the Azure deployment name
+  endpoint: https://your-resource.openai.azure.com
+  apiVersion: "2025-01-01-preview"
   apiKeySecretRef:
     name: azure-credentials
-  configuration:
-    additionalParameters:
-      api_version: "2025-01-01-preview"
 ```
 
 See [examples/azure-openai.yaml](examples/azure-openai.yaml)
@@ -391,38 +384,36 @@ docker run -e DEBUG=true \
 ### Config Generation Flow
 
 1. **Startup** - Entrypoint script runs
-2. **Read CRD** - Parse `/etc/langop/model.json` (mounted ConfigMap)
-3. **Load Secrets** - Read API keys from `/etc/secrets/`
+2. **Read model specs** - Parse every `/etc/langop/models/model__*.json` (the mounted `gateway-config` ConfigMap); a single `/etc/langop/model.json` is read instead when that directory is empty (local testing)
+3. **Load credentials** - Read keys from the Secrets mounted under `/etc/secrets/<name>/`
 4. **Generate Config** - Python script creates LiteLLM `config.yaml`
 5. **Start Proxy** - Launch LiteLLM with generated config
 
 ### File Locations
 
-- `/etc/langop/model.json` - LanguageModel spec (mounted ConfigMap)
-- `/etc/secrets/<secret-name>/<key>` - API keys (mounted Secrets)
+- `/etc/langop/models/model__<name>.json` - one LanguageModel spec per model (mounted `gateway-config` ConfigMap)
+- `/etc/secrets/<secret-name>/<key>` - credentials (mounted Secrets)
 - `/app/config.yaml` - Generated LiteLLM configuration
 - `/usr/local/bin/generate-config.py` - Config generator script
 - `/usr/local/bin/entrypoint.sh` - Container entrypoint
 
 ### Port Configuration
 
-- **4000** - LiteLLM proxy HTTP server
-- **4000/v1/chat/completions** - OpenAI-compatible chat API
-- **4000/health** - Health check endpoint
-- **4000/metrics** - Prometheus metrics (if enabled)
+- **4000** - LiteLLM proxy HTTP server in the container; the `gateway` Service exposes it on **8000**
+- **/v1/chat/completions**, **/v1/responses**, **/v1/messages** - OpenAI chat, OpenAI Responses and Anthropic Messages APIs
+- **/health/liveliness**, **/health/readiness** - probes; no key needed
 
 ## Integration with language-operator
 
-The language-operator automates the deployment:
+The LanguageCluster controller runs one gateway per cluster namespace:
 
-1. **Watch LanguageModel CRDs** - Controller monitors for changes
-2. **Create ConfigMap** - Serialize spec to JSON
-3. **Create Deployment** - Deploy `langop/model` container
-4. **Mount Volumes** - Attach ConfigMap and Secrets
-5. **Create Service** - Expose proxy on port 4000
-6. **Update Status** - Report health and metrics
+1. **Watch LanguageModels** in the namespace
+2. **Write `gateway-config`** - one `model__<name>.json` per model, from its spec
+3. **Mount the referenced Secrets** under `/etc/secrets/<name>/`
+4. **Keep `gateway-auth`** - the HMAC secret per-agent keys are signed with
+5. **Run the `gateway` Deployment and Service** (port 8000), restarting it when any of the above changes
 
-Agents and clients reference models by name:
+Agents reference models by name, and are given the gateway's address and their own key:
 
 ```yaml
 apiVersion: langop.io/v1alpha1
@@ -430,11 +421,11 @@ kind: LanguageAgent
 metadata:
   name: my-agent
 spec:
-  modelRef:
-    name: gpt-4  # References LanguageModel CRD
+  models:
+    - name: gpt-4o   # a LanguageModel in the same namespace
 ```
 
-The agent connects to: `http://gpt-4.langop-system.svc.cluster.local:4000`
+The agent receives `MODEL_ENDPOINT=http://gateway.<namespace>.svc.cluster.local:8000` and `MODEL_API_KEY`.
 
 ## Performance
 
@@ -451,9 +442,9 @@ Tested with LiteLLM v1.89.0 on Kubernetes 1.28:
 
 For high-traffic models:
 
-1. **Horizontal Scaling** - Deploy multiple replicas of the proxy
-2. **Load Balancing** - Use multiple upstream endpoints
-3. **Caching** - Enable response caching to reduce API calls
+1. **Horizontal Scaling** - Run several gateway replicas (`LanguageCluster.spec.gateway.deployment`)
+2. **Load Balancing** - Several LanguageModels sharing a `modelName`, on different endpoints
+3. **Caching** - Configure LiteLLM caching through `LANGOP_GATEWAY_EXTRA_CONFIG` (off by default)
 4. **Rate Limiting** - Prevent overload and control costs
 
 ## Troubleshooting
@@ -461,7 +452,7 @@ For high-traffic models:
 ### Common Issues
 
 **Proxy won't start:**
-- Check if `/etc/langop/model.json` exists and is valid JSON
+- Check `kubectl logs` for the config generator's output: each model spec it loaded, and any key it could not find
 - Verify API key secret is mounted correctly
 - Enable debug mode: `DEBUG=true`
 
@@ -471,7 +462,6 @@ For high-traffic models:
 - Verify multiple proxies aren't sharing limits (use Redis for shared state)
 
 **High latency:**
-- Check if caching is enabled
 - Verify network connectivity to provider
 - Monitor health check intervals (may cause spikes)
 

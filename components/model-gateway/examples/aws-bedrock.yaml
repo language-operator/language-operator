@@ -1,15 +1,22 @@
+# AWS Bedrock with IAM access keys. The Secret's keys are matched by name and
+# applied to this model only:
+#   kubectl -n my-cluster create secret generic aws-bedrock \
+#     --from-literal=AWS_ACCESS_KEY_ID=AKIA... \
+#     --from-literal=AWS_SECRET_ACCESS_KEY=...
+#
+# With a Bedrock API key (bearer token) instead, put AWS_BEARER_TOKEN_BEDROCK in
+# the Secret and nothing else; region and the rest of the spec are unchanged.
 apiVersion: langop.io/v1alpha1
 kind: LanguageModel
 metadata:
   name: bedrock-claude
-  namespace: langop-system
+  namespace: my-cluster        # your LanguageCluster's namespace
 spec:
   provider: bedrock
-  modelName: anthropic.claude-3-5-sonnet-20241022-v2:0
-  endpoint: https://bedrock-runtime.us-east-1.amazonaws.com
-  apiKeySecretRef:
-    name: aws-bedrock-credentials
-    key: aws-secret-access-key
+  modelName: anthropic.claude-sonnet-4-5-20250929-v1:0
+  region: us-east-1
+  credentialsSecretRef:
+    name: aws-bedrock
   timeout: "10m"
   rateLimits:
     requestsPerMinute: 40

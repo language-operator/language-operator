@@ -1,11 +1,14 @@
+# OpenAI.
+#   kubectl -n my-cluster create secret generic openai-credentials \
+#     --from-literal=api-key=sk-...
 apiVersion: langop.io/v1alpha1
 kind: LanguageModel
 metadata:
-  name: gpt-4-turbo
-  namespace: langop-system
+  name: gpt-4o
+  namespace: my-cluster        # your LanguageCluster's namespace
 spec:
   provider: openai
-  modelName: gpt-4-turbo-preview
+  modelName: gpt-4o
   apiKeySecretRef:
     name: openai-credentials
     key: api-key

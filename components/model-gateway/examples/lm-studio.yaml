@@ -2,7 +2,7 @@ apiVersion: langop.io/v1alpha1
 kind: LanguageModel
 metadata:
   name: lm-studio-local
-  namespace: langop-system
+  namespace: my-cluster        # your LanguageCluster's namespace
 spec:
   provider: openai-compatible
   modelName: llama-3.2-3b-instruct
