@@ -66,6 +66,8 @@ The operator injects these into the agent container and all init containers:
 | `AGENT_CLUSTER_NAME` | Name of the LanguageCluster this agent belongs to |
 | `AGENT_CLUSTER_UUID` | Kubernetes UID of the LanguageCluster |
 | `AGENT_EXECUTION_MODE` | `service` or `task` — the agent's `spec.execution.mode`. A runtime keeps running in `service` and exits when its work is done in `task` |
+| `AGENT_EVENT` | The run's `event` parameter, verbatim; also written to `/etc/agent/event.json`. Empty unless the run was started with one. See [Execution Modes](../guides/execution-modes.md#per-run-inputs). |
+| `AGENT_TRIGGER` | The run's `trigger` parameter: what started it. `schedule` for scheduled runs; otherwise empty unless given. |
 | `MODEL_ENDPOINT` | Shared LiteLLM gateway URL — the same URL regardless of how many models are referenced |
 | `LLM_MODEL` | Comma-separated list of model names for all referenced models |
 | `MCP_SERVERS` | Comma-separated tool endpoint URLs — service-mode tools use in-cluster DNS; sidecar-mode tools use `http://localhost:<port>/mcp` |

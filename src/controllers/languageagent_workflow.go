@@ -27,6 +27,19 @@ const (
 	// WorkflowTemplate, and the entrypoint every derived Workflow invokes.
 	agentTemplateName = "agent"
 
+	// workflowParamEvent and workflowParamTrigger are the WorkflowTemplate's
+	// per-run inputs (`argo submit -p event=... -p trigger=...`). The agent sees
+	// them as AGENT_EVENT and AGENT_TRIGGER, and the event also as eventFilePath.
+	workflowParamEvent   = "event"
+	workflowParamTrigger = "trigger"
+
+	// eventFilePath is where a run's event is written. It sits beside config.yaml,
+	// which is mounted as a single file so this path is not inside a volume.
+	eventFilePath = "/etc/agent/event.json"
+
+	// triggerSchedule is the trigger CronWorkflow runs pass.
+	triggerSchedule = "schedule"
+
 	// serviceRetryLimit is the retry limit applied to a service-mode agent. Argo
 	// requires a concrete number, so this stands in for "restart forever" — the
 	// Deployment-like behaviour a service agent is expected to have.
@@ -233,12 +246,34 @@ func buildWorkflowSpec(build *agentPodBuild) (wfv1.WorkflowSpec, error) {
 			Labels:      build.podLabels,
 			Annotations: build.podAnnotations,
 		},
+		// Per-run inputs. Empty defaults keep a run submitted without them
+		// identical to one from before they existed.
+		Arguments: wfv1.Arguments{
+			Parameters: []wfv1.Parameter{
+				{Name: workflowParamEvent, Value: wfv1.AnyStringPtr("")},
+				{Name: workflowParamTrigger, Value: wfv1.AnyStringPtr("")},
+			},
+		},
 		Templates: []wfv1.Template{
 			{
 				Name:           agentTemplateName,
 				Container:      &container,
 				InitContainers: toUserContainers(build.initContainers),
 				Sidecars:       toUserContainers(build.sidecars),
+				// The event as a file too, for runtimes that prefer files and for
+				// payloads too large to want in the environment. Argo's init container
+				// writes the raw data and bind-mounts it into the agent container.
+				Inputs: wfv1.Inputs{
+					Artifacts: wfv1.Artifacts{
+						{
+							Name: workflowParamEvent,
+							Path: eventFilePath,
+							ArtifactLocation: wfv1.ArtifactLocation{
+								Raw: &wfv1.RawArtifact{Data: workflowParameterRef(workflowParamEvent)},
+							},
+						},
+					},
+				},
 			},
 		},
 	}
@@ -253,6 +288,11 @@ func buildWorkflowSpec(build *agentPodBuild) (wfv1.WorkflowSpec, error) {
 	spec.PodSpecPatch = patch
 
 	return spec, nil
+}
+
+// workflowParameterRef is the Argo expression for a WorkflowTemplate parameter.
+func workflowParameterRef(name string) string {
+	return "{{workflow.parameters." + name + "}}"
 }
 
 // buildPodSpecPatch renders the pod fields Argo's WorkflowSpec has no equivalent
@@ -453,6 +493,12 @@ func buildTaskWorkflowSpec(agent *langopv1alpha1.LanguageAgent) wfv1.WorkflowSpe
 	spec := wfv1.WorkflowSpec{
 		WorkflowTemplateRef:   &wfv1.WorkflowTemplateRef{Name: agent.Name},
 		ActiveDeadlineSeconds: agent.Spec.Execution.ActiveDeadlineSeconds,
+		// Only the CronWorkflow builds runs from this spec, so they all say so.
+		Arguments: wfv1.Arguments{
+			Parameters: []wfv1.Parameter{
+				{Name: workflowParamTrigger, Value: wfv1.AnyStringPtr(triggerSchedule)},
+			},
+		},
 	}
 
 	ttl := defaultTaskTTLSeconds
@@ -864,7 +910,12 @@ func (r *LanguageAgentReconciler) buildVolumes(ctx context.Context, agent *lango
 		MountPath: "/tmp",
 	})
 
-	// Mount agent config ConfigMap at /etc/agent/ (provides config.yaml)
+	// Mount config.yaml from the agent ConfigMap as a single file. The volume
+	// projects only that key (the others back env vars), and the subPath mount
+	// leaves /etc/agent itself outside any volume, so Argo can bind-mount a run's
+	// event at /etc/agent/event.json; an artifact path inside a volume would be
+	// written into that volume, and this one is read-only. Losing live ConfigMap
+	// updates costs nothing: a config change replaces the pod.
 	agentConfigMapName := GenerateConfigMapName(agent.Name, "agent")
 	volumes = append(volumes, corev1.Volume{
 		Name: "agent-config",
@@ -873,12 +924,14 @@ func (r *LanguageAgentReconciler) buildVolumes(ctx context.Context, agent *lango
 				LocalObjectReference: corev1.LocalObjectReference{
 					Name: agentConfigMapName,
 				},
+				Items: []corev1.KeyToPath{{Key: agentConfigKeyConfig, Path: agentConfigKeyConfig}},
 			},
 		},
 	})
 	volumeMounts = append(volumeMounts, corev1.VolumeMount{
 		Name:      "agent-config",
-		MountPath: "/etc/agent",
+		MountPath: "/etc/agent/" + agentConfigKeyConfig,
+		SubPath:   agentConfigKeyConfig,
 		ReadOnly:  true,
 	})
 

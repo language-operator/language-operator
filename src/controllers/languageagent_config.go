@@ -24,6 +24,14 @@ import (
 	"k8s.io/utils/ptr"
 )
 
+// Keys of the agent ConfigMap. Only config.yaml is mounted as a file; the others
+// back env vars via configMapKeyRef.
+const (
+	agentConfigKeyConfig       = "config.yaml"
+	agentConfigKeyInstructions = "instructions"
+	agentConfigKeyPersona      = "persona"
+)
+
 // agentConfigYAML is the structure marshaled into /etc/agent/config.yaml.
 // sigs.k8s.io/yaml marshals via JSON, so json tags control the output key names.
 type agentConfigYAML struct {
@@ -148,10 +156,21 @@ func (r *LanguageAgentReconciler) reconcileConfigMap(ctx context.Context, agent 
 		return "", fmt.Errorf("failed to marshal config.yaml: %w", err)
 	}
 
+	// The instructions and persona keys are derived from fields already in
+	// config.yaml, so hashing config.yaml alone still tracks every change.
 	configHash := hashString(string(configYAMLBytes))[:16]
 
 	data := map[string]string{
-		"config.yaml": string(configYAMLBytes),
+		agentConfigKeyConfig: string(configYAMLBytes),
+	}
+	// AGENT_INSTRUCTIONS and AGENT_PERSONA are read from these keys rather than
+	// inlined in the WorkflowTemplate, where Argo would treat any {{...}} in the
+	// text as a template tag (see buildAgentEnv).
+	if agent.Spec.Instructions != "" {
+		data[agentConfigKeyInstructions] = agent.Spec.Instructions
+	}
+	if text := formatPersona(persona); text != "" {
+		data[agentConfigKeyPersona] = text
 	}
 
 	configMapName := GenerateConfigMapName(agent.Name, "agent")
@@ -660,23 +679,27 @@ func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *lang
 		}
 	}
 
+	// Per-run inputs, resolved by Argo from the WorkflowTemplate's parameters.
+	// Both default to "", so a run submitted without them sees empty values.
+	env = append(env,
+		corev1.EnvVar{Name: "AGENT_EVENT", Value: workflowParameterRef(workflowParamEvent)},
+		corev1.EnvVar{Name: "AGENT_TRIGGER", Value: workflowParameterRef(workflowParamTrigger)},
+	)
+
+	// Instructions and persona are free text, and every literal in the
+	// WorkflowTemplate is subject to Argo templating: a {{workflow.parameters.event}}
+	// in the instructions would splice a run's payload into them, and {{=...}} would
+	// be evaluated. Reading them from the agent ConfigMap keeps the text out of the
+	// template entirely.
 	if agent.Spec.Instructions != "" {
-		env = append(env, corev1.EnvVar{
-			Name:  "AGENT_INSTRUCTIONS",
-			Value: agent.Spec.Instructions,
-		})
+		env = append(env, agentConfigEnv(agent, "AGENT_INSTRUCTIONS", agentConfigKeyInstructions))
 	}
 
 	// AGENT_PERSONA is the role context — the runtime launcher passes it to the
 	// agent CLI via --append-system-prompt. Looked up here (not in the adapter)
 	// so the operator stays the single source of truth for env injection.
-	if persona, err := r.fetchPersona(ctx, agent); err == nil && persona != nil {
-		if text := formatPersona(persona); text != "" {
-			env = append(env, corev1.EnvVar{
-				Name:  "AGENT_PERSONA",
-				Value: text,
-			})
-		}
+	if persona, err := r.fetchPersona(ctx, agent); err == nil && formatPersona(persona) != "" {
+		env = append(env, agentConfigEnv(agent, "AGENT_PERSONA", agentConfigKeyPersona))
 	}
 
 	// Model gateway URLs and names (comma-separated)
@@ -707,6 +730,22 @@ func (r *LanguageAgentReconciler) buildAgentEnv(ctx context.Context, agent *lang
 	env = append(env, agent.Spec.Deployment.Env...)
 
 	return env
+}
+
+// agentConfigEnv sources an env var from a key of the agent ConfigMap. Optional,
+// so a key that is briefly missing (the ConfigMap and the template are written in
+// separate steps) leaves the variable unset instead of blocking the pod.
+func agentConfigEnv(agent *langopv1alpha1.LanguageAgent, name, key string) corev1.EnvVar {
+	return corev1.EnvVar{
+		Name: name,
+		ValueFrom: &corev1.EnvVarSource{
+			ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{Name: GenerateConfigMapName(agent.Name, "agent")},
+				Key:                  key,
+				Optional:             ptr.To(true),
+			},
+		},
+	}
 }
 
 func (r *LanguageAgentReconciler) fetchPersona(ctx context.Context, agent *langopv1alpha1.LanguageAgent) (*langopv1alpha1.LanguagePersona, error) {
