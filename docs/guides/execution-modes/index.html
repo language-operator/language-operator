@@ -1079,6 +1079,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#per-run-inputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-run inputs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#schedules" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1837,6 +1848,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#per-run-inputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-run inputs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#schedules" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1979,6 +2001,56 @@
 </code></pre></div>
 <p>It is the agent's mode, not the run's. <code>argo submit --from workflowtemplate/assistant</code> against a service agent starts a second pod that also sees <code>service</code> and never exits; for one-off runs, use a task agent.</p>
 <p>A task run that finishes its work but stays <code>Running</code> means the image ignores the variable. Check that your runtime version supports task mode, and set <code>activeDeadlineSeconds</code> as a backstop.</p>
+<h2 id="per-run-inputs">Per-run inputs<a class="headerlink" href="#per-run-inputs" title="Permanent link">&para;</a></h2>
+<p>A task agent's runs are otherwise identical: everything the pod sees comes from the agent spec. To hand one run an input, such as a PR to review or an alert that fired, pass the WorkflowTemplate's two optional parameters:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>argo<span class="w"> </span>submit<span class="w"> </span>--from<span class="w"> </span>workflowtemplate/triage<span class="w"> </span>-n<span class="w"> </span>my-cluster<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>-p<span class="w"> </span><span class="nv">event</span><span class="o">=</span><span class="s1">&#39;{&quot;pr&quot;:42,&quot;repo&quot;:&quot;acme/api&quot;}&#39;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>-p<span class="w"> </span><span class="nv">trigger</span><span class="o">=</span>manual
+</code></pre></div>
+<p>or, from a controller or any other system that creates runs:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">argoproj.io/v1alpha1</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Workflow</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="nt">metadata</span><span class="p">:</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="nt">generateName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">triage-</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my-cluster</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">  </span><span class="nt">workflowTemplateRef</span><span class="p">:</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">triage</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">  </span><span class="nt">arguments</span><span class="p">:</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">    </span><span class="nt">parameters</span><span class="p">:</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">event</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="w">        </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;{&quot;pr&quot;:42,&quot;repo&quot;:&quot;acme/api&quot;}&#39;</span>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">trigger</span>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="w">        </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">webhook</span>
+</code></pre></div>
+<p>Inside the pod:</p>
+<table>
+<thead>
+<tr>
+<th>Where</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AGENT_EVENT</code></td>
+<td>The <code>event</code> value, verbatim (JSON by convention)</td>
+</tr>
+<tr>
+<td><code>/etc/agent/event.json</code></td>
+<td>The same value as a file, for runtimes that prefer files and for large payloads</td>
+</tr>
+<tr>
+<td><code>AGENT_TRIGGER</code></td>
+<td>The <code>trigger</code> value: a free-form name for what started the run. Scheduled runs pass <code>schedule</code></td>
+</tr>
+</tbody>
+</table>
+<p>Both default to empty, so a run without them behaves as before. Your own <code>spec.deployment.env</code>, <code>command</code> and <code>args</code> can reference <code>{{workflow.parameters.event}}</code> directly; instructions and persona text never can, because the operator keeps them out of the template.</p>
+<div class="admonition warning">
+<p class="admonition-title">The event is data, not instructions</p>
+<p>Whoever can start a run controls its event. A runtime should hand it to the model as the input to work on, kept apart from the agent's instructions, and never let it change what the agent is told to do.</p>
+</div>
 <h2 id="schedules">Schedules<a class="headerlink" href="#schedules" title="Permanent link">&para;</a></h2>
 <p><code>spec.execution.schedule</code> accepts a standard 5-field cron expression (<code>minute hour day-of-month month day-of-week</code>), textual month and day aliases (<code>0 0 1 JAN MON</code>), the <code>@yearly</code>/<code>@monthly</code>/<code>@weekly</code>/<code>@daily</code>/<code>@hourly</code> macros, and <code>@every &lt;duration&gt;</code> (e.g. <code>@every 90m</code>). Invalid expressions are rejected at admission rather than silently never firing.</p>
 <p><code>concurrencyPolicy</code> decides what happens when a run is due while the previous one is still going:</p>
@@ -2046,13 +2118,13 @@
 <p>An Argo Workflow has no replica count and no scale subresource, so <code>spec.deployment.replicas</code> and <code>spec.deployment.autoscaling</code> are rejected at admission rather than silently ignored. To run more agents, create more agents.</p>
 <h2 id="serviceaccount-requirements">ServiceAccount requirements<a class="headerlink" href="#serviceaccount-requirements" title="Permanent link">&para;</a></h2>
 <p>Agent pods run as <code>language-agent-&lt;agent-name&gt;</code>, which the operator grants <code>create</code> and <code>patch</code> on <code>argoproj.io/workflowtaskresults</code> — the Argo executor uses it to report each node's outcome. If you set <code>spec.deployment.serviceAccountName</code> to a ServiceAccount of your own, it must carry that permission or every run will fail at completion:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">apiGroups</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;argoproj.io&quot;</span><span class="p p-Indicator">]</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">resources</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;workflowtaskresults&quot;</span><span class="p p-Indicator">]</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="nt">verbs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;create&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;patch&quot;</span><span class="p p-Indicator">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">apiGroups</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;argoproj.io&quot;</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">resources</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;workflowtaskresults&quot;</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span><span class="nt">verbs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;create&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;patch&quot;</span><span class="p p-Indicator">]</span>
 </code></pre></div>
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <p>Argo Workflows must be installed. The <code>language-operator</code> chart bundles it as a subchart and installs it by default; the operator refuses to start if the <code>argoproj.io</code> CRDs are missing. To manage Argo yourself:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>helm<span class="w"> </span>install<span class="w"> </span>language-operator<span class="w"> </span>...<span class="w"> </span>--set<span class="w"> </span>argo-workflows.enabled<span class="o">=</span><span class="nb">false</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>helm<span class="w"> </span>install<span class="w"> </span>language-operator<span class="w"> </span>...<span class="w"> </span>--set<span class="w"> </span>argo-workflows.enabled<span class="o">=</span><span class="nb">false</span>
 </code></pre></div>
 
 

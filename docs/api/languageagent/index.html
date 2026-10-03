@@ -2492,6 +2492,14 @@ for them.</p>
 <td><code>service</code> or <code>task</code> — the resolved <code>spec.execution.mode</code>, after runtime defaults. Always set. See <a href="../../guides/execution-modes/#how-the-agent-knows-its-mode">Execution Modes</a>.</td>
 </tr>
 <tr>
+<td><code>AGENT_EVENT</code></td>
+<td>The run's <code>event</code> parameter, verbatim; also written to <code>/etc/agent/event.json</code>. Empty unless the run was started with one. See <a href="../../guides/execution-modes/#per-run-inputs">Execution Modes</a>.</td>
+</tr>
+<tr>
+<td><code>AGENT_TRIGGER</code></td>
+<td>The run's <code>trigger</code> parameter: what started it. <code>schedule</code> for scheduled runs; otherwise empty unless given.</td>
+</tr>
+<tr>
 <td><code>MODEL_ENDPOINT</code></td>
 <td>Shared LiteLLM gateway URL (<code>http://gateway.&lt;namespace&gt;.svc.cluster.local:8000</code>)</td>
 </tr>
