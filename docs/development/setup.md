@@ -85,7 +85,7 @@ the first run (empty files are fine if you have no overrides).
 Because the image tag is the git SHA, **commit your changes before `make dev`** so the tag changes
 and Docker cache is busted.
 
-For the model gateway image, `cd components/model-gateway && make dev` builds and imports it into k3s.
+For the model gateway image, `cd components/model-gateway && make dev` builds and imports it into k3s as `model-gateway:latest`. The root `make dev` points the operator at that tag; a chart install otherwise pins the gateway to the chart appVersion.
 
 Watch operator logs:
 

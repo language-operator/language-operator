@@ -31,6 +31,7 @@ dev:
 		--set image.repository=docker.io/library/language-operator \
 		--set-string image.tag=$(GIT_SHA) \
 		--set image.pullPolicy=Never \
+		--set config.gateway.image=ghcr.io/language-operator/model-gateway:latest \
 		--wait --timeout 5m
 	helm dependency build charts/language-operator-runtimes
 	helm upgrade --install language-operator-runtimes charts/language-operator-runtimes \

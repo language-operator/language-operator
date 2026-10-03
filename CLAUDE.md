@@ -116,7 +116,7 @@ NetworkPolicy allows any pod with label `langop.io/kind=LanguageAgent` to reach 
 
 Agent pods additionally get `create`/`patch` on `argoproj.io/workflowtaskresults` in their Role — the Argo executor reports each node's outcome that way, and a run fails at completion without it.
 
-The shared gateway image (`ghcr.io/language-operator/model-gateway:latest`) is configured via `config.gateway.image` and `config.gateway.imagePullPolicy` in the Helm chart. For local development, `make dev` in `components/model-gateway/` builds and imports the image into k3s.
+The shared gateway image defaults to `ghcr.io/language-operator/model-gateway:<chart appVersion>` (pinned per release, like the operator image) and is overridden via `config.gateway.image` and `config.gateway.imagePullPolicy` in the Helm chart. The operator binary alone falls back to `:latest`. For local development, `make dev` in `components/model-gateway/` builds and imports the image into k3s.
 
 ### Telemetry (`src/pkg/telemetry/`)
 

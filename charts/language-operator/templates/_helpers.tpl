@@ -80,6 +80,15 @@ per chart release rather than tracking a floating tag.
 {{- end }}
 
 {{/*
+Shared LiteLLM gateway image (one per LanguageCluster). Defaults to the model-gateway
+image at the chart appVersion so the gateway is pinned per chart release, like the
+operator, bridge and git images; `latest` is the newest build of main, not a release.
+*/}}
+{{- define "language-operator.gatewayImage" -}}
+{{- .Values.config.gateway.image | default (printf "ghcr.io/language-operator/model-gateway:%s" .Chart.AppVersion) }}
+{{- end }}
+
+{{/*
 Git client image (workspace-seeder and repository init containers in agent pods).
 Tag defaults to the chart appVersion so the image is pinned per chart release.
 */}}
