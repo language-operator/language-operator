@@ -16,7 +16,7 @@ Minimum recommended node capacity:
 
 - **Kubernetes 1.26+**
 - **kubectl** and **Helm 3.8+**
-- **cert-manager v1.12+** — required for webhook TLS
+- **cert-manager v1.12+** — provides the TLS certificate for the admission webhooks. Not needed for Ingress TLS; to install without it, see [Running without cert-manager](../guides/cluster-setup.md#running-without-cert-manager)
 - **NetworkPolicy-capable CNI** — Cilium, Calico, Weave, or Antrea
 - **Persistent storage** — for agent workspace PVCs
 - **Argo Workflows** — agents run as Argo Workflows. The operator chart bundles it as a
@@ -74,7 +74,7 @@ helm install language-operator \
 ```
 
 !!! note "Values vary by cluster"
-    Replace `traefik` with your ingress class (e.g. `nginx`, `alb`), `local-path` with your StorageClass, and the TLS issuer with the name of your cert-manager `ClusterIssuer` or `Issuer`. All of these can also be set in a values file with `helm install -f values.yaml`.
+    Replace `traefik` with your ingress class (e.g. `nginx`, `alb`), `local-path` with your StorageClass, and the TLS issuer with the name of your cert-manager `ClusterIssuer` or `Issuer`. The two `config.tls.certificateIssuer*` flags are optional: leave them out when TLS terminates upstream of the cluster, you bring your own certificate, or you serve plain HTTP (see [Ingress TLS without cert-manager](../guides/cluster-setup.md#ingress-tls-without-cert-manager)). All of these can also be set in a values file with `helm install -f values.yaml`.
 
 See the [complete `values.yaml`](https://github.com/language-operator/language-operator/blob/main/charts/language-operator/values.yaml) for all available configuration options.
 
