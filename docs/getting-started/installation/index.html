@@ -2094,7 +2094,7 @@
 <ul>
 <li><strong>Kubernetes 1.26+</strong></li>
 <li><strong>kubectl</strong> and <strong>Helm 3.8+</strong></li>
-<li><strong>cert-manager v1.12+</strong> — required for webhook TLS</li>
+<li><strong>cert-manager v1.12+</strong> — provides the TLS certificate for the admission webhooks. Not needed for Ingress TLS; to install without it, see <a href="../../guides/cluster-setup/#running-without-cert-manager">Running without cert-manager</a></li>
 <li><strong>NetworkPolicy-capable CNI</strong> — Cilium, Calico, Weave, or Antrea</li>
 <li><strong>Persistent storage</strong> — for agent workspace PVCs</li>
 <li><strong>Argo Workflows</strong> — agents run as Argo Workflows. The operator chart bundles it as a
@@ -2151,7 +2151,7 @@ Installing from a source checkout needs the dependency resolved first:</p>
 </code></pre></div>
 <div class="admonition note">
 <p class="admonition-title">Values vary by cluster</p>
-<p>Replace <code>traefik</code> with your ingress class (e.g. <code>nginx</code>, <code>alb</code>), <code>local-path</code> with your StorageClass, and the TLS issuer with the name of your cert-manager <code>ClusterIssuer</code> or <code>Issuer</code>. All of these can also be set in a values file with <code>helm install -f values.yaml</code>.</p>
+<p>Replace <code>traefik</code> with your ingress class (e.g. <code>nginx</code>, <code>alb</code>), <code>local-path</code> with your StorageClass, and the TLS issuer with the name of your cert-manager <code>ClusterIssuer</code> or <code>Issuer</code>. The two <code>config.tls.certificateIssuer*</code> flags are optional: leave them out when TLS terminates upstream of the cluster, you bring your own certificate, or you serve plain HTTP (see <a href="../../guides/cluster-setup/#ingress-tls-without-cert-manager">Ingress TLS without cert-manager</a>). All of these can also be set in a values file with <code>helm install -f values.yaml</code>.</p>
 </div>
 <p>See the <a href="https://github.com/language-operator/language-operator/blob/main/charts/language-operator/values.yaml">complete <code>values.yaml</code></a> for all available configuration options.</p>
 <h3 id="3-install-the-runtimes">3. Install the Runtimes<a class="headerlink" href="#3-install-the-runtimes" title="Permanent link">&para;</a></h3>

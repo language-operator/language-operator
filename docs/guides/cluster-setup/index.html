@@ -1171,6 +1171,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="cert-manager">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#running-without-cert-manager" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running without cert-manager
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1223,6 +1240,56 @@
     <span class="md-ellipsis">
       
         Using the issuer with Language Operator
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ingress-tls-without-cert-manager" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ingress TLS without cert-manager
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Ingress TLS without cert-manager">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tls-terminated-upstream" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TLS terminated upstream
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bring-your-own-certificate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bring your own certificate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#plain-http" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Plain HTTP
       
     </span>
   </a>
@@ -1974,6 +2041,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="cert-manager">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#running-without-cert-manager" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running without cert-manager
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2026,6 +2110,56 @@
     <span class="md-ellipsis">
       
         Using the issuer with Language Operator
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ingress-tls-without-cert-manager" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ingress TLS without cert-manager
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Ingress TLS without cert-manager">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tls-terminated-upstream" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TLS terminated upstream
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bring-your-own-certificate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bring your own certificate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#plain-http" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Plain HTTP
       
     </span>
   </a>
@@ -2141,7 +2275,7 @@
 </code></pre></div>
 <p>Set <code>config.agents.storageClassName</code> in your Helm values to the StorageClass you want to use. If left empty, the cluster default StorageClass is used.</p>
 <h2 id="cert-manager">cert-manager<a class="headerlink" href="#cert-manager" title="Permanent link">&para;</a></h2>
-<p>Language Operator uses admission webhooks, which require TLS certificates. cert-manager provisions these automatically.</p>
+<p>Language Operator uses admission webhooks, and Kubernetes only calls a webhook over TLS. cert-manager provisions and rotates that certificate. This is the only thing the operator needs cert-manager for: Ingress TLS works without it (see <a href="#ingress-tls-without-cert-manager">Ingress TLS without cert-manager</a>), and you can run without it entirely (see <a href="#running-without-cert-manager">Running without cert-manager</a>).</p>
 <p>Check if cert-manager is already installed:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-n<span class="w"> </span>cert-manager
 </code></pre></div>
@@ -2149,111 +2283,163 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>https://github.com/cert-manager/cert-manager/releases/download/v1.16.3/cert-manager.yaml
 <a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>kubectl<span class="w"> </span><span class="nb">wait</span><span class="w"> </span>--for<span class="o">=</span><span class="nv">condition</span><span class="o">=</span>Available<span class="w"> </span>deployment<span class="w"> </span>--all<span class="w"> </span>-n<span class="w"> </span>cert-manager<span class="w"> </span>--timeout<span class="o">=</span>60s
 </code></pre></div>
+<h3 id="running-without-cert-manager">Running without cert-manager<a class="headerlink" href="#running-without-cert-manager" title="Permanent link">&para;</a></h3>
+<p>Install the operator with the admission webhooks turned off:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>--set<span class="w"> </span>config.webhook.enabled<span class="o">=</span><span class="nb">false</span>
+</code></pre></div>
+<p>Field defaults still apply, because they live in the CRD schema and the API server fills them in without any webhook: workspace, resource requests and limits, and tool transport. What you lose is admission validation: cluster membership, the image registry allowlist, and the runtime and cross-field spec checks. <code>kubectl apply</code> accepts an invalid resource, and the problem surfaces afterwards as an operator event and a failed status condition on the resource instead of a rejected request.</p>
+<p>To keep the webhooks with a certificate from somewhere else, set <code>config.webhook.certManager.enabled=false</code> instead. The chart then no longer creates the cert-manager <code>Certificate</code> or injects the CA, so you must create the <code>&lt;release&gt;-webhook-cert</code> TLS Secret (<code>language-operator-webhook-cert</code> with the release name used in the <a href="../../getting-started/installation/">installation guide</a>) in the operator namespace and set <code>caBundle</code> on the <code>&lt;release&gt;-mutating-webhook</code> and <code>&lt;release&gt;-validating-webhook</code> configurations yourself, and keep both current when the certificate rotates.</p>
 <h2 id="traefik">Traefik<a class="headerlink" href="#traefik" title="Permanent link">&para;</a></h2>
 <p>Traefik is the recommended ingress controller for Language Operator. When a <code>LanguageCluster</code> has <code>spec.domain</code> set, the operator creates an Ingress resource at <code>gateway.&lt;domain&gt;</code> — Traefik handles routing and TLS termination.</p>
 <p><strong>k3s</strong>: Traefik is pre-installed. Verify it is running:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-n<span class="w"> </span>kube-system<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>traefik
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>kubectl<span class="w"> </span>get<span class="w"> </span>svc<span class="w"> </span>-n<span class="w"> </span>kube-system<span class="w"> </span>traefik
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-n<span class="w"> </span>kube-system<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>traefik
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>kubectl<span class="w"> </span>get<span class="w"> </span>svc<span class="w"> </span>-n<span class="w"> </span>kube-system<span class="w"> </span>traefik
 </code></pre></div>
 <p>Note the <code>EXTERNAL-IP</code> of the <code>traefik</code> service — this is the IP your DNS records should point to.</p>
 <p><strong>Other clusters</strong>: Install Traefik via Helm:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>helm<span class="w"> </span>repo<span class="w"> </span>add<span class="w"> </span>traefik<span class="w"> </span>https://traefik.github.io/charts
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>helm<span class="w"> </span>repo<span class="w"> </span>update
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>helm<span class="w"> </span>install<span class="w"> </span>traefik<span class="w"> </span>traefik/traefik<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span>--namespace<span class="w"> </span>traefik<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span>--create-namespace<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">  </span>--set<span class="w"> </span>ports.web.redirectTo.port<span class="o">=</span>websecure<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">  </span>--set<span class="w"> </span>ports.websecure.tls.enabled<span class="o">=</span><span class="nb">true</span>
-<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>
-<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>kubectl<span class="w"> </span><span class="nb">wait</span><span class="w"> </span>--for<span class="o">=</span><span class="nv">condition</span><span class="o">=</span>Available<span class="w"> </span>deployment/traefik<span class="w"> </span>-n<span class="w"> </span>traefik<span class="w"> </span>--timeout<span class="o">=</span>60s
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>helm<span class="w"> </span>repo<span class="w"> </span>add<span class="w"> </span>traefik<span class="w"> </span>https://traefik.github.io/charts
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>helm<span class="w"> </span>repo<span class="w"> </span>update
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>helm<span class="w"> </span>install<span class="w"> </span>traefik<span class="w"> </span>traefik/traefik<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">  </span>--namespace<span class="w"> </span>traefik<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">  </span>--create-namespace<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">  </span>--set<span class="w"> </span>ports.web.redirectTo.port<span class="o">=</span>websecure<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">  </span>--set<span class="w"> </span>ports.websecure.tls.enabled<span class="o">=</span><span class="nb">true</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>kubectl<span class="w"> </span><span class="nb">wait</span><span class="w"> </span>--for<span class="o">=</span><span class="nv">condition</span><span class="o">=</span>Available<span class="w"> </span>deployment/traefik<span class="w"> </span>-n<span class="w"> </span>traefik<span class="w"> </span>--timeout<span class="o">=</span>60s
 </code></pre></div>
 <p>Retrieve the external IP once the LoadBalancer is provisioned:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>svc<span class="w"> </span>-n<span class="w"> </span>traefik<span class="w"> </span>traefik
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>svc<span class="w"> </span>-n<span class="w"> </span>traefik<span class="w"> </span>traefik
 </code></pre></div>
 <p>Point a wildcard DNS record (<code>*.&lt;your-domain&gt;</code>) at this IP, or create individual A records for each agent domain.</p>
 <h2 id="lets-encrypt">Let's Encrypt<a class="headerlink" href="#lets-encrypt" title="Permanent link">&para;</a></h2>
 <p>With cert-manager installed, configure a <code>ClusterIssuer</code> to automatically provision TLS certificates via Let's Encrypt.</p>
 <h3 id="staging-test-first">Staging (test first)<a class="headerlink" href="#staging-test-first" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="s">apiVersion: cert-manager.io/v1</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="s">kind: ClusterIssuer</span>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="s">metadata:</span>
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="s">  name: letsencrypt-staging</span>
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="s">spec:</span>
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="s">  acme:</span>
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="s">    server: https://acme-staging-v02.api.letsencrypt.org/directory</span>
-<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="s">    email: your-email@example.com</span>
-<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="s">    privateKeySecretRef:</span>
-<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="s">      name: letsencrypt-staging</span>
-<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="s">    solvers:</span>
-<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="s">      - http01:</span>
-<a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="s">          ingress:</span>
-<a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="s">            ingressClassName: traefik</span>
-<a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a><span class="s">EOF</span>
-</code></pre></div>
-<h3 id="production">Production<a class="headerlink" href="#production" title="Permanent link">&para;</a></h3>
-<p>Once staging certificates are issued successfully, switch to the production issuer:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
 <a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="s">apiVersion: cert-manager.io/v1</span>
 <a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="s">kind: ClusterIssuer</span>
 <a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="s">metadata:</span>
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="s">  name: letsencrypt-production</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="s">  name: letsencrypt-staging</span>
 <a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="s">spec:</span>
 <a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="s">  acme:</span>
-<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="s">    server: https://acme-v02.api.letsencrypt.org/directory</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="s">    server: https://acme-staging-v02.api.letsencrypt.org/directory</span>
 <a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="s">    email: your-email@example.com</span>
 <a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="s">    privateKeySecretRef:</span>
-<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="s">      name: letsencrypt-production</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="s">      name: letsencrypt-staging</span>
 <a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="s">    solvers:</span>
 <a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="s">      - http01:</span>
 <a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="s">          ingress:</span>
 <a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a><span class="s">            ingressClassName: traefik</span>
 <a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a><span class="s">EOF</span>
 </code></pre></div>
+<h3 id="production">Production<a class="headerlink" href="#production" title="Permanent link">&para;</a></h3>
+<p>Once staging certificates are issued successfully, switch to the production issuer:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>kubectl<span class="w"> </span>apply<span class="w"> </span>-f<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;EOF</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="s">apiVersion: cert-manager.io/v1</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="s">kind: ClusterIssuer</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="s">metadata:</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="s">  name: letsencrypt-production</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="s">spec:</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="s">  acme:</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="s">    server: https://acme-v02.api.letsencrypt.org/directory</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="s">    email: your-email@example.com</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="s">    privateKeySecretRef:</span>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="s">      name: letsencrypt-production</span>
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="s">    solvers:</span>
+<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="s">      - http01:</span>
+<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="s">          ingress:</span>
+<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="s">            ingressClassName: traefik</span>
+<a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a><span class="s">EOF</span>
+</code></pre></div>
 <p>Verify the issuer is ready:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>clusterissuer
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="c1"># NAME                     READY   AGE</span>
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="c1"># letsencrypt-staging      True    30s</span>
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="c1"># letsencrypt-production   True    30s</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>clusterissuer
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="c1"># NAME                     READY   AGE</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="c1"># letsencrypt-staging      True    30s</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="c1"># letsencrypt-production   True    30s</span>
 </code></pre></div>
 <h3 id="using-the-issuer-with-language-operator">Using the issuer with Language Operator<a class="headerlink" href="#using-the-issuer-with-language-operator" title="Permanent link">&para;</a></h3>
 <p>Pass the issuer name when installing the operator:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>--set<span class="w"> </span>config.tls.certificateIssuerName<span class="o">=</span>letsencrypt-production<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>--set<span class="w"> </span>config.tls.certificateIssuerKind<span class="o">=</span>ClusterIssuer
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>--set<span class="w"> </span>config.tls.certificateIssuerName<span class="o">=</span>letsencrypt-production<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>--set<span class="w"> </span>config.tls.certificateIssuerKind<span class="o">=</span>ClusterIssuer
 </code></pre></div>
 <p>These are included in the <code>helm install</code> command on the <a href="../../getting-started/installation/">installation page</a>. The operator uses them to annotate every gateway and agent Ingress it creates, so cert-manager automatically provisions and renews the TLS certificates.</p>
 <div class="admonition tip">
 <p class="admonition-title">DNS must resolve before HTTP-01 challenge</p>
 <p>cert-manager proves domain ownership by serving a token over HTTP. Ensure your DNS records point to the Traefik IP before creating any <code>LanguageCluster</code> with a domain.</p>
 </div>
+<h2 id="ingress-tls-without-cert-manager">Ingress TLS without cert-manager<a class="headerlink" href="#ingress-tls-without-cert-manager" title="Permanent link">&para;</a></h2>
+<p>A <code>LanguageCluster</code> with <code>spec.domain</code> gets an Ingress for each service-mode agent (<code>&lt;agent&gt;.&lt;domain&gt;</code>), for the gateway (<code>gateway.&lt;domain&gt;</code>) when <code>spec.ingress.enabled</code> is <code>true</code>, and for the login page (<code>auth.&lt;domain&gt;</code>) when embedded Dex is on. None of these need cert-manager. Two settings on the cluster decide how they are served:</p>
+<ul>
+<li><strong><code>spec.ingress.tls.mode</code></strong> chooses where each Ingress gets its certificate:<ul>
+<li><code>auto</code> (the default) uses the operator's cert-manager issuer (<code>config.tls.certificateIssuerName</code>). With no issuer configured, the Ingress has no TLS block.</li>
+<li><code>secret</code> always uses the existing TLS Secret named in <code>spec.ingress.tls.secretName</code>. Setting <code>secretName</code> without a mode implies <code>secret</code>.</li>
+<li><code>none</code> never adds a TLS block, even when an issuer is configured.</li>
+</ul>
+</li>
+<li><strong><code>spec.ingress.externalScheme</code></strong> (<code>http</code> or <code>https</code>) is the scheme the outside world uses. The operator builds the OIDC issuer URL, OAuth redirect URIs and webhook URLs from it, independently of the Ingress TLS block. It defaults to the operator's <code>config.tls.externalScheme</code>, which is <code>https</code>.</li>
+</ul>
+<p>Leave <code>config.tls.certificateIssuerName</code> empty (the chart default) when installing the operator, and pick the case that matches your setup.</p>
+<h3 id="tls-terminated-upstream">TLS terminated upstream<a class="headerlink" href="#tls-terminated-upstream" title="Permanent link">&para;</a></h3>
+<p>An external load balancer or reverse proxy holds the certificate and forwards plain HTTP to the ingress controller. The Ingresses need no TLS block, but users still reach the cluster over HTTPS, so the URLs the operator hands out must say <code>https</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nt">domain</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">agents.example.com</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">  </span><span class="nt">ingress</span><span class="p">:</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">    </span><span class="nt">tls</span><span class="p">:</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">      </span><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">none</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">    </span><span class="nt">externalScheme</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https</span>
+</code></pre></div>
+<p><code>mode: auto</code> with no issuer gives the same Ingress, but the operator records a warning event on each one, because it can't tell an intentional upstream setup from a forgotten issuer. <code>mode: none</code> states the intent and keeps the events quiet.</p>
+<h3 id="bring-your-own-certificate">Bring your own certificate<a class="headerlink" href="#bring-your-own-certificate" title="Permanent link">&para;</a></h3>
+<p>Store a certificate that covers every host as a TLS Secret in the cluster's namespace. A wildcard for <code>*.&lt;domain&gt;</code> covers the gateway, the agents and <code>auth.&lt;domain&gt;</code>. Then point the cluster at it:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>kubectl<span class="w"> </span>create<span class="w"> </span>secret<span class="w"> </span>tls<span class="w"> </span>agents-wildcard-tls<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span>--cert<span class="o">=</span>wildcard.crt<span class="w"> </span>--key<span class="o">=</span>wildcard.key<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span>--namespace<span class="w"> </span>&lt;cluster-namespace&gt;
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span><span class="nt">domain</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">agents.example.com</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span><span class="nt">ingress</span><span class="p">:</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">    </span><span class="nt">tls</span><span class="p">:</span>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">      </span><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">secret</span>
+<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="w">      </span><span class="nt">secretName</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">agents-wildcard-tls</span>
+</code></pre></div>
+<p>The ingress controller terminates TLS with that Secret. You are responsible for renewing it.</p>
+<h3 id="plain-http">Plain HTTP<a class="headerlink" href="#plain-http" title="Permanent link">&para;</a></h3>
+<p>For local and development clusters that are reached over HTTP:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="nt">spec</span><span class="p">:</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span><span class="nt">domain</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">agents.127.0.0.1.nip.io</span>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">  </span><span class="nt">ingress</span><span class="p">:</span>
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">    </span><span class="nt">tls</span><span class="p">:</span>
+<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="w">      </span><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">none</span>
+<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="w">    </span><span class="nt">externalScheme</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http</span>
+</code></pre></div>
+<p>To make <code>http</code> the default for every cluster, install the operator with <code>--set config.tls.externalScheme=http</code> instead of setting it per cluster.</p>
 <h2 id="verifying-cluster-readiness">Verifying Cluster Readiness<a class="headerlink" href="#verifying-cluster-readiness" title="Permanent link">&para;</a></h2>
 <p>Run through this checklist before installing:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Kubernetes version</span>
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>kubectl<span class="w"> </span>version<span class="w"> </span>--short
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
-<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="c1"># NetworkPolicy-capable CNI pods running</span>
-<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-n<span class="w"> </span>kube-system<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-E<span class="w"> </span><span class="s1">&#39;cilium|calico|weave|antrea&#39;</span>
-<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>
-<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="c1"># StorageClass available</span>
-<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>kubectl<span class="w"> </span>get<span class="w"> </span>storageclass
-<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>
-<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="c1"># cert-manager running</span>
-<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-n<span class="w"> </span>cert-manager
-<a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a>
-<a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a><span class="c1"># Traefik running and has external IP</span>
-<a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a>kubectl<span class="w"> </span>get<span class="w"> </span>svc<span class="w"> </span>-n<span class="w"> </span>kube-system<span class="w"> </span>traefik<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="o">||</span><span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>svc<span class="w"> </span>-n<span class="w"> </span>traefik<span class="w"> </span>traefik
-<a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a>
-<a id="__codelineno-13-16" name="__codelineno-13-16" href="#__codelineno-13-16"></a><span class="c1"># ClusterIssuers ready</span>
-<a id="__codelineno-13-17" name="__codelineno-13-17" href="#__codelineno-13-17"></a>kubectl<span class="w"> </span>get<span class="w"> </span>clusterissuer
-<a id="__codelineno-13-18" name="__codelineno-13-18" href="#__codelineno-13-18"></a>
-<a id="__codelineno-13-19" name="__codelineno-13-19" href="#__codelineno-13-19"></a><span class="c1"># Sufficient node resources (operator + Argo controller + gateway + one agent needs ~4Gi RAM)</span>
-<a id="__codelineno-13-20" name="__codelineno-13-20" href="#__codelineno-13-20"></a>kubectl<span class="w"> </span>top<span class="w"> </span>nodes
-<a id="__codelineno-13-21" name="__codelineno-13-21" href="#__codelineno-13-21"></a>
-<a id="__codelineno-13-22" name="__codelineno-13-22" href="#__codelineno-13-22"></a><span class="c1"># Argo Workflows CRDs and controller (installed with the operator chart by default).</span>
-<a id="__codelineno-13-23" name="__codelineno-13-23" href="#__codelineno-13-23"></a><span class="c1"># The operator refuses to start without these.</span>
-<a id="__codelineno-13-24" name="__codelineno-13-24" href="#__codelineno-13-24"></a>kubectl<span class="w"> </span>get<span class="w"> </span>crds<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>argoproj.io
-<a id="__codelineno-13-25" name="__codelineno-13-25" href="#__codelineno-13-25"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-n<span class="w"> </span>language-operator<span class="w"> </span>-l<span class="w"> </span>app.kubernetes.io/name<span class="o">=</span>argo-workflows-workflow-controller
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c1"># Kubernetes version</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>kubectl<span class="w"> </span>version<span class="w"> </span>--short
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="c1"># NetworkPolicy-capable CNI pods running</span>
+<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-n<span class="w"> </span>kube-system<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-E<span class="w"> </span><span class="s1">&#39;cilium|calico|weave|antrea&#39;</span>
+<a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>
+<a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="c1"># StorageClass available</span>
+<a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a>kubectl<span class="w"> </span>get<span class="w"> </span>storageclass
+<a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a>
+<a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a><span class="c1"># cert-manager running (unless installing with config.webhook.enabled=false)</span>
+<a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-n<span class="w"> </span>cert-manager
+<a id="__codelineno-18-12" name="__codelineno-18-12" href="#__codelineno-18-12"></a>
+<a id="__codelineno-18-13" name="__codelineno-18-13" href="#__codelineno-18-13"></a><span class="c1"># Traefik running and has external IP</span>
+<a id="__codelineno-18-14" name="__codelineno-18-14" href="#__codelineno-18-14"></a>kubectl<span class="w"> </span>get<span class="w"> </span>svc<span class="w"> </span>-n<span class="w"> </span>kube-system<span class="w"> </span>traefik<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="o">||</span><span class="w"> </span>kubectl<span class="w"> </span>get<span class="w"> </span>svc<span class="w"> </span>-n<span class="w"> </span>traefik<span class="w"> </span>traefik
+<a id="__codelineno-18-15" name="__codelineno-18-15" href="#__codelineno-18-15"></a>
+<a id="__codelineno-18-16" name="__codelineno-18-16" href="#__codelineno-18-16"></a><span class="c1"># ClusterIssuers ready (only if cert-manager issues your Ingress certificates)</span>
+<a id="__codelineno-18-17" name="__codelineno-18-17" href="#__codelineno-18-17"></a>kubectl<span class="w"> </span>get<span class="w"> </span>clusterissuer
+<a id="__codelineno-18-18" name="__codelineno-18-18" href="#__codelineno-18-18"></a>
+<a id="__codelineno-18-19" name="__codelineno-18-19" href="#__codelineno-18-19"></a><span class="c1"># Sufficient node resources (operator + Argo controller + gateway + one agent needs ~4Gi RAM)</span>
+<a id="__codelineno-18-20" name="__codelineno-18-20" href="#__codelineno-18-20"></a>kubectl<span class="w"> </span>top<span class="w"> </span>nodes
+<a id="__codelineno-18-21" name="__codelineno-18-21" href="#__codelineno-18-21"></a>
+<a id="__codelineno-18-22" name="__codelineno-18-22" href="#__codelineno-18-22"></a><span class="c1"># Argo Workflows CRDs and controller (installed with the operator chart by default).</span>
+<a id="__codelineno-18-23" name="__codelineno-18-23" href="#__codelineno-18-23"></a><span class="c1"># The operator refuses to start without these.</span>
+<a id="__codelineno-18-24" name="__codelineno-18-24" href="#__codelineno-18-24"></a>kubectl<span class="w"> </span>get<span class="w"> </span>crds<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>argoproj.io
+<a id="__codelineno-18-25" name="__codelineno-18-25" href="#__codelineno-18-25"></a>kubectl<span class="w"> </span>get<span class="w"> </span>pods<span class="w"> </span>-n<span class="w"> </span>language-operator<span class="w"> </span>-l<span class="w"> </span>app.kubernetes.io/name<span class="o">=</span>argo-workflows-workflow-controller
 </code></pre></div>
 
 
