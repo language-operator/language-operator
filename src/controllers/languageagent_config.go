@@ -438,7 +438,7 @@ func buildRepositoryVolumes(agent *langopv1alpha1.LanguageAgent) []corev1.Volume
 		return nil
 	}
 	mode := int32(0o400)
-	return []corev1.Volume{
+	volumes := []corev1.Volume{
 		{
 			Name: repositoryCredentialsVolume,
 			VolumeSource: corev1.VolumeSource{
@@ -449,19 +449,90 @@ func buildRepositoryVolumes(agent *langopv1alpha1.LanguageAgent) []corev1.Volume
 			},
 		},
 	}
+	if repositoryCLIConfigDir(agent) != "" {
+		volumes = append(volumes, corev1.Volume{
+			Name: cliConfigVolume,
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{Medium: corev1.StorageMediumMemory},
+			},
+		})
+	}
+	return volumes
 }
 
-// buildRepositoryCredentialMount returns the read-only mount of the credentials
-// Secret, or nil when no secretRef is set.
-func buildRepositoryCredentialMount(agent *langopv1alpha1.LanguageAgent) *corev1.VolumeMount {
+// buildRepositoryMounts returns the mounts the repository init container and the agent
+// container share: the credentials Secret, read-only, and the vendor CLI config
+// directory the init container writes into. Nil when no secretRef is set.
+func buildRepositoryMounts(agent *langopv1alpha1.LanguageAgent) []corev1.VolumeMount {
 	if !agentHasRepository(agent) || agent.Spec.Repository.SecretRef == nil {
 		return nil
 	}
-	return &corev1.VolumeMount{
+	mounts := []corev1.VolumeMount{{
 		Name:      repositoryCredentialsVolume,
 		MountPath: repositoryCredentialsMountPath,
 		ReadOnly:  true,
+	}}
+	if repositoryCLIConfigDir(agent) != "" {
+		mounts = append(mounts, corev1.VolumeMount{
+			Name:      cliConfigVolume,
+			MountPath: cliConfigMountPath,
+		})
 	}
+	return mounts
+}
+
+// cliConfigVolume is a pod-local, memory-backed directory the repository init container
+// writes the vendor CLI's config into, so gh and glab read the token from a file rather
+// than from an environment variable every process in the agent container inherits.
+// The agent container mounts it writable: gh rewrites hosts.yml and adds config.yml on
+// first use.
+const cliConfigVolume = "cli-config"
+
+// cliConfigMountPath is where cliConfigVolume is mounted in both containers.
+const cliConfigMountPath = "/var/run/langop.io/cli"
+
+// repositoryCLIConfigDir returns the config directory of the vendor CLI that is
+// authenticated through a file (gh for github, glab for gitlab), or "" when there is
+// none: no secretRef, no host, or a vendor whose CLI has no config-directory variable
+// (tea reads only XDG_CONFIG_HOME, which would move every other tool's config too).
+func repositoryCLIConfigDir(agent *langopv1alpha1.LanguageAgent) string {
+	if !agentHasRepository(agent) || agent.Spec.Repository.SecretRef == nil ||
+		langopv1alpha1.RepositoryHost(agent.Spec.Repository.URL) == "" {
+		return ""
+	}
+	switch repositoryVendor(agent) {
+	case langopv1alpha1.RepositoryVendorGitHub:
+		return cliConfigMountPath + "/gh"
+	case langopv1alpha1.RepositoryVendorGitLab:
+		return cliConfigMountPath + "/glab"
+	default:
+		return ""
+	}
+}
+
+// buildCLIConfigScript returns the shell that writes the vendor CLI's config from the
+// mounted Secret's `token` key, or "" when the vendor has no file-based config. It runs
+// before the clone-once check, so the config exists on every pod start. A Secret
+// without a `token` key writes nothing and the CLI reports itself unauthenticated.
+func buildCLIConfigScript(agent *langopv1alpha1.LanguageAgent) string {
+	dir := repositoryCLIConfigDir(agent)
+	if dir == "" {
+		return ""
+	}
+	host := langopv1alpha1.RepositoryHost(agent.Spec.Repository.URL)
+	var file, body string
+	switch repositoryVendor(agent) {
+	case langopv1alpha1.RepositoryVendorGitHub:
+		file = "hosts.yml"
+		body = `%s:\n    oauth_token: \"%s\"\n    user: x-access-token\n    git_protocol: https\n`
+	case langopv1alpha1.RepositoryVendorGitLab:
+		file = "config.yml"
+		body = `hosts:\n  %s:\n    token: \"%s\"\n    api_host: ` + host + `\n    git_protocol: https\n`
+	}
+	return fmt.Sprintf(`if [ -f %[1]s/token ]; then
+  (umask 077 && mkdir -p %[2]s && printf "%[3]s" %[4]s "$(tr -d '\r\n' < %[1]s/token)" > %[2]s/%[5]s)
+fi
+`, repositoryCredentialsMountPath, dir, body, host, file)
 }
 
 // gitCredentialHelper is an inline git credential helper that answers "get" from the
@@ -508,13 +579,15 @@ func buildGitEnv(agent *langopv1alpha1.LanguageAgent) []corev1.EnvVar {
 	return env
 }
 
-// buildVendorEnv returns the credential the repository vendor's CLI reads, taken from
-// the `token` key of spec.repository.secretRef: GH_TOKEN (and GH_HOST for GitHub
-// Enterprise) for github, GITLAB_TOKEN (and GITLAB_HOST for self-hosted) for gitlab,
-// GITEA_TOKEN/GITEA_INSTANCE_URL (what `tea` logs in from, no `tea login` needed) and
-// FORGEJO_TOKEN/FORGEJO_HOST for forgejo and gitea, nothing for git. The reference is
-// optional so a Secret without a `token` key (SSH key, username and password) still
-// starts. Agent container only.
+// buildVendorEnv returns what the repository vendor's CLI needs to authenticate with
+// the `token` key of spec.repository.secretRef. gh (github) and glab (gitlab) read it
+// from a config file the repository init container writes (buildCLIConfigScript), so
+// the agent container gets only GH_CONFIG_DIR / GLAB_CONFIG_DIR, plus GH_HOST for
+// GitHub Enterprise or GITLAB_HOST for self-hosted. tea has no config-directory
+// variable, so forgejo and gitea get the token itself: GITEA_TOKEN/GITEA_INSTANCE_URL
+// (what `tea` logs in from, no `tea login` needed) and FORGEJO_TOKEN/FORGEJO_HOST.
+// Nothing for git. The token reference is optional so a Secret without a `token` key
+// (SSH key, username and password) still starts. Agent container only.
 func buildVendorEnv(agent *langopv1alpha1.LanguageAgent) []corev1.EnvVar {
 	if !agentHasRepository(agent) || agent.Spec.Repository.SecretRef == nil {
 		return nil
@@ -529,13 +602,19 @@ func buildVendorEnv(agent *langopv1alpha1.LanguageAgent) []corev1.EnvVar {
 	host := langopv1alpha1.RepositoryHost(agent.Spec.Repository.URL)
 	switch repositoryVendor(agent) {
 	case langopv1alpha1.RepositoryVendorGitHub:
-		env := []corev1.EnvVar{{Name: "GH_TOKEN", ValueFrom: token}}
+		var env []corev1.EnvVar
+		if dir := repositoryCLIConfigDir(agent); dir != "" {
+			env = append(env, corev1.EnvVar{Name: "GH_CONFIG_DIR", Value: dir})
+		}
 		if host != "" && host != "github.com" {
 			env = append(env, corev1.EnvVar{Name: "GH_HOST", Value: host})
 		}
 		return env
 	case langopv1alpha1.RepositoryVendorGitLab:
-		env := []corev1.EnvVar{{Name: "GITLAB_TOKEN", ValueFrom: token}}
+		var env []corev1.EnvVar
+		if dir := repositoryCLIConfigDir(agent); dir != "" {
+			env = append(env, corev1.EnvVar{Name: "GLAB_CONFIG_DIR", Value: dir})
+		}
 		if host != "" && host != "gitlab.com" {
 			env = append(env, corev1.EnvVar{Name: "GITLAB_HOST", Value: host})
 		}
@@ -596,7 +675,7 @@ func buildRepositoryInitContainer(agent *langopv1alpha1.LanguageAgent, image str
 	}
 
 	script := fmt.Sprintf(`set -e
-TARGET=%q
+%sTARGET=%q
 URL=%q
 REF=%q
 if [ -d "$TARGET/.git" ]; then
@@ -612,7 +691,7 @@ if [ -n "$REF" ]; then
 else
   git clone %s "$URL" "$TARGET"
 fi
-echo "cloned $URL into $TARGET"`, target, repo.URL, repo.Ref, depthFlag, depthFlag)
+echo "cloned $URL into $TARGET"`, buildCLIConfigScript(agent), target, repo.URL, repo.Ref, depthFlag, depthFlag)
 
 	mounts := []corev1.VolumeMount{
 		{
@@ -620,9 +699,7 @@ echo "cloned $URL into $TARGET"`, target, repo.URL, repo.Ref, depthFlag, depthFl
 			MountPath: mountPath,
 		},
 	}
-	if credMount := buildRepositoryCredentialMount(agent); credMount != nil {
-		mounts = append(mounts, *credMount)
-	}
+	mounts = append(mounts, buildRepositoryMounts(agent)...)
 
 	return &corev1.Container{
 		Name:            "repository",

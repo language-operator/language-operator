@@ -264,8 +264,8 @@ Environment variables injected into every agent container and all init container
 | `GIT_CONFIG_COUNT`, `GIT_CONFIG_KEY_n`, `GIT_CONFIG_VALUE_n` | Git configuration for the repository: the default commit identity and, with `secretRef` on an HTTPS remote, a host-scoped credential helper. Agent and `repository` init containers only. See [Git and CLI authentication](#git-and-cli-authentication). |
 | `GIT_SSH_COMMAND` | With `secretRef` on an SSH remote: `ssh -i` pointing at the mounted `ssh-privatekey`. Agent and `repository` init containers only. |
 | `GIT_TERMINAL_PROMPT` | `0` when `secretRef` is set, so a missing credential fails fast instead of prompting. |
-| `GH_TOKEN`, `GH_HOST` | With `secretRef` and vendor `github`: the Secret's `token` key for `gh` (`GH_HOST` only for GitHub Enterprise hosts). Agent container only. |
-| `GITLAB_TOKEN`, `GITLAB_HOST` | With `secretRef` and vendor `gitlab`: the Secret's `token` key for `glab` (`GITLAB_HOST` only for self-hosted instances). Agent container only. |
+| `GH_CONFIG_DIR`, `GH_HOST` | With `secretRef` and vendor `github`: `/var/run/langop.io/cli/gh`, where the `repository` init container writes `gh`'s `hosts.yml` from the Secret's `token` key (`GH_HOST` only for GitHub Enterprise hosts). Agent container only. |
+| `GLAB_CONFIG_DIR`, `GITLAB_HOST` | With `secretRef` and vendor `gitlab`: `/var/run/langop.io/cli/glab`, where the `repository` init container writes `glab`'s `config.yml` from the Secret's `token` key (`GITLAB_HOST` only for self-hosted instances). Agent container only. |
 | `GITEA_TOKEN`, `GITEA_INSTANCE_URL`, `FORGEJO_TOKEN`, `FORGEJO_HOST` | With `secretRef` and vendor `forgejo` or `gitea`: the Secret's `token` key, and the instance's web root (`scheme://host[:port]` of an HTTPS remote, `https://<host>` for SSH) and host. `tea` logs in from `GITEA_TOKEN` and `GITEA_INSTANCE_URL` with no `tea login`. Agent container only. |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Propagated from the operator environment when configured |
 | `OTEL_SERVICE_NAME` | Set to `agent-<name>` when `OTEL_EXPORTER_OTLP_ENDPOINT` is configured |
@@ -329,7 +329,12 @@ When `spec.repository` is set, the agent container (and the `repository` init co
 
 The helper is scoped to the repository's host, so the token is never offered to another remote, and it reads the files on every call, so a rotated Secret is picked up without a restart. To commit under a different identity, set `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL`, `GIT_COMMITTER_NAME` and `GIT_COMMITTER_EMAIL` in `spec.deployment.env`; git's environment beats its configuration. A user-supplied `GIT_CONFIG_COUNT` replaces the operator's block entirely.
 
-The Secret's `token` key is also exported to the vendor's CLI in the agent container only: `GH_TOKEN` for `github` (plus `GH_HOST` for a GitHub Enterprise host) and `GITLAB_TOKEN` for `gitlab` (plus `GITLAB_HOST` when self-hosted), and for `forgejo` or `gitea` both `GITEA_TOKEN` and `FORGEJO_TOKEN`, plus `GITEA_INSTANCE_URL` and `FORGEJO_HOST`. `tea` reads `GITEA_TOKEN` and `GITEA_INSTANCE_URL` directly, so `tea pr list` works without a `tea login` and the token is never written to disk; the instance URL keeps the scheme and port of an HTTPS remote (a Forgejo on `http://forge:3000`) and is `https://<host>` for an SSH remote. The reference is optional, so a Secret holding only an SSH key or a username and password still starts the pod; the CLI then reports itself unauthenticated. Environment variables do not refresh, so a rotated token reaches the CLI on the next pod restart. Runtime images must ship `gh`, `glab` or `tea` for this to be useful.
+The Secret's `token` key also authenticates the vendor's CLI in the agent container, so `gh pr create` or `glab mr list` work with no login step:
+
+- **`github` and `gitlab`: a config file, not an environment variable.** On every pod start the `repository` init container writes `gh`'s `hosts.yml` or `glab`'s `config.yml` (mode `0600`) into a memory-backed `emptyDir` mounted at `/var/run/langop.io/cli` in both containers, and the agent container gets `GH_CONFIG_DIR=/var/run/langop.io/cli/gh` or `GLAB_CONFIG_DIR=/var/run/langop.io/cli/glab`, plus `GH_HOST` for a GitHub Enterprise host or `GITLAB_HOST` when self-hosted. The token stays out of the process environment, which every subprocess inherits and which ends up in `env` dumps, crash reports and, if it reads them, the model's context. The directory is writable because `gh` rewrites its config on first use. Anything that needs the raw token reads `/var/run/secrets/langop.io/git/token`.
+- **`forgejo` and `gitea`: environment variables.** `tea` has no config-directory setting (only `XDG_CONFIG_HOME`, which would move every other tool's config too), so these vendors get `GITEA_TOKEN` and `FORGEJO_TOKEN`, plus `GITEA_INSTANCE_URL` and `FORGEJO_HOST`. `tea` reads `GITEA_TOKEN` and `GITEA_INSTANCE_URL` directly, so `tea pr list` works without a `tea login`; the instance URL keeps the scheme and port of an HTTPS remote (a Forgejo on `http://forge:3000`) and is `https://<host>` for an SSH remote. Every process in the agent container can read these.
+
+The `token` key is optional, so a Secret holding only an SSH key or a username and password still starts the pod; the CLI then reports itself unauthenticated. Neither path refreshes, so a rotated token reaches the CLI on the next pod restart. Runtime images must ship `gh`, `glab` or `tea` for this to be useful.
 
 **Private repository example (HTTPS token):**
 
@@ -356,7 +361,7 @@ metadata:
   namespace: default
 type: Opaque
 stringData:
-  token: github_pat_xxxxxxxxxxxxxxxxxxxx   # a personal access token (HTTPS); also exported as GH_TOKEN
+  token: github_pat_xxxxxxxxxxxxxxxxxxxx   # a personal access token (HTTPS); also configures gh
   # For SSH instead, provide an ssh-privatekey key and a git@host:... url.
 ```
 
