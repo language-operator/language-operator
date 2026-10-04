@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -510,8 +511,10 @@ func buildGitEnv(agent *langopv1alpha1.LanguageAgent) []corev1.EnvVar {
 // buildVendorEnv returns the credential the repository vendor's CLI reads, taken from
 // the `token` key of spec.repository.secretRef: GH_TOKEN (and GH_HOST for GitHub
 // Enterprise) for github, GITLAB_TOKEN (and GITLAB_HOST for self-hosted) for gitlab,
-// nothing for git. The reference is optional so a Secret without a `token` key (SSH
-// key, username and password) still starts. Agent container only.
+// GITEA_TOKEN/GITEA_INSTANCE_URL (what `tea` logs in from, no `tea login` needed) and
+// FORGEJO_TOKEN/FORGEJO_HOST for forgejo and gitea, nothing for git. The reference is
+// optional so a Secret without a `token` key (SSH key, username and password) still
+// starts. Agent container only.
 func buildVendorEnv(agent *langopv1alpha1.LanguageAgent) []corev1.EnvVar {
 	if !agentHasRepository(agent) || agent.Spec.Repository.SecretRef == nil {
 		return nil
@@ -537,9 +540,32 @@ func buildVendorEnv(agent *langopv1alpha1.LanguageAgent) []corev1.EnvVar {
 			env = append(env, corev1.EnvVar{Name: "GITLAB_HOST", Value: host})
 		}
 		return env
+	case langopv1alpha1.RepositoryVendorForgejo, langopv1alpha1.RepositoryVendorGitea:
+		env := []corev1.EnvVar{
+			{Name: "GITEA_TOKEN", ValueFrom: token},
+			{Name: "FORGEJO_TOKEN", ValueFrom: token},
+		}
+		if host != "" {
+			env = append(env,
+				corev1.EnvVar{Name: "GITEA_INSTANCE_URL", Value: repositoryInstanceURL(agent.Spec.Repository.URL, host)},
+				corev1.EnvVar{Name: "FORGEJO_HOST", Value: host},
+			)
+		}
+		return env
 	default:
 		return nil
 	}
+}
+
+// repositoryInstanceURL returns the web root of the forge hosting a repository: the
+// scheme, host and port of an http(s) URL, so an instance on plain http or a
+// non-default port is reached as cloned, and https://<host> for SSH remotes, whose
+// port is the SSH daemon's rather than the web server's.
+func repositoryInstanceURL(rawURL, host string) string {
+	if u, err := url.Parse(strings.TrimSpace(rawURL)); err == nil && (u.Scheme == "http" || u.Scheme == "https") {
+		return u.Scheme + "://" + strings.ToLower(u.Host)
+	}
+	return "https://" + host
 }
 
 // buildRepositoryInitContainer returns the "repository" init container that clones

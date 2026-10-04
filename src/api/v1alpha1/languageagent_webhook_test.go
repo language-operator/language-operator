@@ -811,6 +811,9 @@ func TestLanguageAgentDefaultRepositoryVendor(t *testing.T) {
 		{"GitHub.com mixed case", &RepositorySpec{URL: "https://GitHub.com/org/repo"}, RepositoryVendorGitHub},
 		{"gitlab.com https", &RepositorySpec{URL: "https://gitlab.com/group/sub/repo.git"}, RepositoryVendorGitLab},
 		{"gitlab.com ssh url", &RepositorySpec{URL: "ssh://git@gitlab.com/group/repo.git"}, RepositoryVendorGitLab},
+		{"codeberg.org is forgejo", &RepositorySpec{URL: "https://codeberg.org/org/repo.git"}, RepositoryVendorForgejo},
+		{"codeberg.org scp-like", &RepositorySpec{URL: "git@codeberg.org:org/repo.git"}, RepositoryVendorForgejo},
+		{"explicit gitea kept", &RepositorySpec{URL: "https://gitea.example.com/org/repo.git", Vendor: RepositoryVendorGitea}, RepositoryVendorGitea},
 		{"self-hosted defaults to git", &RepositorySpec{URL: "https://gitlab.example.com/group/repo.git"}, RepositoryVendorGit},
 		{"explicit vendor kept", &RepositorySpec{URL: "https://gitlab.example.com/group/repo.git", Vendor: RepositoryVendorGitLab}, RepositoryVendorGitLab},
 	}

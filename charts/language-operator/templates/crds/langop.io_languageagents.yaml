@@ -6970,7 +6970,8 @@ spec:
                       The Secret is mounted read-only into the repository init container and the agent
                       container, where git authenticates through a credential helper that reads it, so
                       fetch and push keep working after the clone. The `token` key is also exported to
-                      the vendor's CLI (`GH_TOKEN` for github, `GITLAB_TOKEN` for gitlab).
+                      the vendor's CLI (`GH_TOKEN` for github, `GITLAB_TOKEN` for gitlab, `GITEA_TOKEN`
+                      for forgejo and gitea).
                     properties:
                       name:
                         default: ""
@@ -6990,11 +6991,14 @@ spec:
                   vendor:
                     description: |-
                       Vendor is the hosting vendor of the repository. It selects which CLI receives the
-                      credential inside the agent container (`gh` for github, `glab` for gitlab; none
-                      for git). Defaulted from the URL host (github.com, gitlab.com), otherwise git.
+                      credential inside the agent container (`gh` for github, `glab` for gitlab, `tea`
+                      for forgejo and its alias gitea; none for git). Defaulted from the URL host
+                      (github.com, gitlab.com, codeberg.org), otherwise git.
                     enum:
                     - github
                     - gitlab
+                    - forgejo
+                    - gitea
                     - git
                     type: string
                 required:

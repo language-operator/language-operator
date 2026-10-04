@@ -266,6 +266,7 @@ Environment variables injected into every agent container and all init container
 | `GIT_TERMINAL_PROMPT` | `0` when `secretRef` is set, so a missing credential fails fast instead of prompting. |
 | `GH_TOKEN`, `GH_HOST` | With `secretRef` and vendor `github`: the Secret's `token` key for `gh` (`GH_HOST` only for GitHub Enterprise hosts). Agent container only. |
 | `GITLAB_TOKEN`, `GITLAB_HOST` | With `secretRef` and vendor `gitlab`: the Secret's `token` key for `glab` (`GITLAB_HOST` only for self-hosted instances). Agent container only. |
+| `GITEA_TOKEN`, `GITEA_INSTANCE_URL`, `FORGEJO_TOKEN`, `FORGEJO_HOST` | With `secretRef` and vendor `forgejo` or `gitea`: the Secret's `token` key, and the instance's web root (`scheme://host[:port]` of an HTTPS remote, `https://<host>` for SSH) and host. `tea` logs in from `GITEA_TOKEN` and `GITEA_INSTANCE_URL` with no `tea login`. Agent container only. |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Propagated from the operator environment when configured |
 | `OTEL_SERVICE_NAME` | Set to `agent-<name>` when `OTEL_EXPORTER_OTLP_ENDPOINT` is configured |
 | `OTEL_RESOURCE_ATTRIBUTES` | Propagated from the operator environment (conditional on OTEL endpoint) |
@@ -308,7 +309,7 @@ The clone is **clone-once**: if the target directory already contains a `.git` d
 | `path` | string | repo name from URL | Subdirectory under the workspace `mountPath` to clone into. Must be relative (no leading `/`, no `..` segments). |
 | `depth` | int | `0` (full clone) | When > 0, performs a shallow clone with this history depth. |
 | `secretRef` | *LocalObjectReference | — | Secret holding git credentials for private repositories. Recognized keys: `token`, or `username` + `password` (HTTPS); `ssh-privatekey` (SSH). |
-| `vendor` | string | from the host | Hosting vendor: `github`, `gitlab` or `git`. Selects which CLI receives the credential (`gh`, `glab`, none). Defaulted from the URL host (`github.com`, `gitlab.com`); set it for GitHub Enterprise or self-hosted GitLab. |
+| `vendor` | string | from the host | Hosting vendor: `github`, `gitlab`, `forgejo` (alias `gitea`) or `git`. Selects which CLI receives the credential (`gh`, `glab`, `tea`, none). Defaulted from the URL host (`github.com`, `gitlab.com`, `codeberg.org`); set it for GitHub Enterprise, self-hosted GitLab, or a self-hosted Forgejo or Gitea. |
 
 The clone target is `<workspace mountPath>/<path>` — e.g. with the default `mountPath: /workspace` and `path: app`, the repository is cloned to `/workspace/app` and `AGENT_REPO_DIR` is set to `/workspace/app`. When `path` is omitted, the directory name is derived from the URL (e.g. `https://github.com/org/repo.git` → `/workspace/repo`).
 
@@ -328,7 +329,7 @@ When `spec.repository` is set, the agent container (and the `repository` init co
 
 The helper is scoped to the repository's host, so the token is never offered to another remote, and it reads the files on every call, so a rotated Secret is picked up without a restart. To commit under a different identity, set `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL`, `GIT_COMMITTER_NAME` and `GIT_COMMITTER_EMAIL` in `spec.deployment.env`; git's environment beats its configuration. A user-supplied `GIT_CONFIG_COUNT` replaces the operator's block entirely.
 
-The Secret's `token` key is also exported to the vendor's CLI in the agent container only: `GH_TOKEN` for `github` (plus `GH_HOST` for a GitHub Enterprise host) and `GITLAB_TOKEN` for `gitlab` (plus `GITLAB_HOST` when self-hosted). The reference is optional, so a Secret holding only an SSH key or a username and password still starts the pod; `gh` and `glab` then report themselves unauthenticated. Environment variables do not refresh, so a rotated token reaches the CLI on the next pod restart. Runtime images must ship `gh` or `glab` for this to be useful.
+The Secret's `token` key is also exported to the vendor's CLI in the agent container only: `GH_TOKEN` for `github` (plus `GH_HOST` for a GitHub Enterprise host) and `GITLAB_TOKEN` for `gitlab` (plus `GITLAB_HOST` when self-hosted), and for `forgejo` or `gitea` both `GITEA_TOKEN` and `FORGEJO_TOKEN`, plus `GITEA_INSTANCE_URL` and `FORGEJO_HOST`. `tea` reads `GITEA_TOKEN` and `GITEA_INSTANCE_URL` directly, so `tea pr list` works without a `tea login` and the token is never written to disk; the instance URL keeps the scheme and port of an HTTPS remote (a Forgejo on `http://forge:3000`) and is `https://<host>` for an SSH remote. The reference is optional, so a Secret holding only an SSH key or a username and password still starts the pod; the CLI then reports itself unauthenticated. Environment variables do not refresh, so a rotated token reaches the CLI on the next pod restart. Runtime images must ship `gh`, `glab` or `tea` for this to be useful.
 
 **Private repository example (HTTPS token):**
 
