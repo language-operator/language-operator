@@ -1543,6 +1543,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#aliases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Aliases
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#typed-fields-and-params" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2058,6 +2069,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#aliases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Aliases
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#typed-fields-and-params" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2329,6 +2351,8 @@
 <p>The admission webhook rejects a spec that is missing what its <code>provider</code> needs (the "Also needs" column).</p>
 <h3 id="wildcard-models">Wildcard models<a class="headerlink" href="#wildcard-models" title="Permanent link">&para;</a></h3>
 <p><code>modelName: "*"</code> makes the LanguageModel stand for the provider's whole catalogue. Agents choose a model with <code>spec.models[].model</code> and call it as <code>&lt;LanguageModel name&gt;/&lt;model&gt;</code>. See <a href="../../components/models/#wildcard-models-a-whole-vendor-catalogue">Wildcard models</a>.</p>
+<h3 id="aliases">Aliases<a class="headerlink" href="#aliases" title="Permanent link">&para;</a></h3>
+<p><code>aliases</code> lists extra names the gateway serves with this model, for clients such as Gemini CLI that ask for fixed model names of their own. Up to 64 unique names without whitespace, not allowed on a wildcard model. See <a href="../../components/models/#model-aliases-answering-to-a-clients-model-names">Model aliases</a>.</p>
 <h3 id="typed-fields-and-params">Typed fields and <code>params</code><a class="headerlink" href="#typed-fields-and-params" title="Permanent link">&para;</a></h3>
 <table>
 <thead>

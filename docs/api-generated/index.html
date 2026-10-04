@@ -4123,6 +4123,12 @@ spec.selfConfigure allowlist before patching.</p>
 <td>MinLength: 1 <br />Required: {} <br /></td>
 </tr>
 <tr>
+<td><code>aliases</code> <em>string array</em></td>
+<td>Aliases are extra names the gateway answers to for this model, for clients<br />that ask for fixed model names of their own (e.g. Gemini CLI calling<br />"gemini-3.1-flash-lite" for its helper tasks). A request for an alias is<br />served by this model. An alias equal to another LanguageModel's modelName,<br />or one already claimed by another LanguageModel, is ignored with a warning<br />in the gateway log. Not allowed on a wildcard model.</td>
+<td></td>
+<td>MaxItems: 64 <br />items:MaxLength: 253 <br />items:MinLength: 1 <br />items:Pattern: <code>^\S+$</code> <br />Optional: {} <br /></td>
+</tr>
+<tr>
 <td><code>endpoint</code> <em>string</em></td>
 <td>Endpoint is the API endpoint URL (required for openai-compatible and azure)</td>
 <td></td>
