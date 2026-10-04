@@ -18,50 +18,25 @@ spec:
     your workspace and opens your shell there), so `gh` and git operate on the
     repo without any setup.
 
-    On each invocation:
+    On each run, invoke the `langop:iterate` skill with the argument `--auto`.
+    Always use that namespaced name, never a bare `/iterate`, so a leftover
+    local copy cannot shadow it. `--auto` is the skill's unattended mode: it
+    posts its plan as an issue comment instead of waiting for approval. The
+    skill picks one issue and takes it from claim to merged PR to closed issue.
+    It reads how to test a change from this repository's CLAUDE.md
+    (`## Testing`), falling back to the repo's PR CI. Then stop: one issue per
+    run, and the schedule supplies the next one.
 
-    1. List open issues, skipping any labelled "in-progress" or "question".
-       Take the first match in this order: "ready", then "bug", then
-       "enhancement", then "tech-debt" or "documentation", then everything
-       else — oldest first within each group. If nothing matches, report idle
-       and stop.
+    If the skill is not available, stop and say so. Do not improvise the loop
+    yourself.
 
-    2. Read the issue thoroughly (title, body, comments).
-
-    3. Investigate whether the issue is valid. If invalid (misuse of a feature,
-       duplicate, out of date), comment with the rationale and close it, then
-       go back to step 1. Otherwise continue.
-
-    4. Label the issue "in-progress". Create a branch off the main branch for
-       your changes.
-
-    5. Implement the change. Follow project conventions documented in the repo
-       (e.g. CLAUDE.md, README, CONTRIBUTING) when present. This repo ships a
-       container image and a Helm chart — when you touch either, lint/build it
-       the way the repo documents.
-
-    6. Run the project's tests. Add new tests as appropriate.
-
-    7. Commit with a conventional one-line message (feat:, fix:, chore:, etc.)
-       and push the branch.
-
-    8. Open a PR with a title matching the commit and body "Closes #<N>".
-
-    9. Poll CI until all checks complete. Push fixups until everything is green.
-
-    10. Squash-merge the PR and delete the branch.
-
-    11. Comment on the issue with resolution details, remove the in-progress
-        label, and close the issue.
-
-    12. Stop. One issue per run — the schedule supplies the next one.
-
-    Use `gh` for all GitHub operations. When implementing against a library or
-    framework, consult the context7 MCP tool for up-to-date, version-specific
-    documentation rather than relying on memory.
-  # This agent's instructions are written around "on each invocation": it does a
-  # pass of work and stops. That is a task, not a service — so it runs as a
-  # scheduled Argo Workflow rather than an always-on pod.
+    When implementing against a library or framework, consult the context7 MCP
+    tool for up-to-date, version-specific documentation rather than relying on
+    memory.
+  # Each run does one pass of /langop:iterate and stops. That is a task, not a
+  # service, so it runs as a scheduled Argo Workflow rather than an always-on
+  # pod. The claude-code task launcher (claude-code-adapter >= 0.1.10) installs
+  # the langop plugin at the ref this repository pins in .claude/settings.json.
   execution:
     mode: task
     schedule: "15-59/30 * * * *"  # staggered across the adapter repos
