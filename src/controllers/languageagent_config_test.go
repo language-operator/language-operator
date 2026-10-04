@@ -1493,6 +1493,58 @@ func TestLanguageAgentController_Repository_GitLabVendor(t *testing.T) {
 	}
 }
 
+func TestLanguageAgentController_Repository_ForgejoVendor(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		vendor     string
+		url        string
+		wantURL    string
+		wantHost   string
+		wantHelper bool
+	}{
+		{"codeberg https", "forgejo", "https://codeberg.org/org/repo.git", "https://codeberg.org", "codeberg.org", true},
+		{"self-hosted http with port", "forgejo", "http://Forge.example.com:3000/org/repo.git", "http://forge.example.com:3000", "forge.example.com", true},
+		{"scp-like ssh uses https web root", "forgejo", "git@forge.example.com:org/repo.git", "https://forge.example.com", "forge.example.com", false},
+		{"ssh url ignores the ssh port", "forgejo", "ssh://git@forge.example.com:2222/org/repo.git", "https://forge.example.com", "forge.example.com", false},
+		{"gitea alias", "gitea", "https://gitea.example.com/org/repo.git", "https://gitea.example.com", "gitea.example.com", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			agent := gen.LanguageAgent("fj-agent", "default",
+				gen.SetAgentWorkspace("5Gi"),
+				gen.SetAgentRepository(tc.url, "", "", "fj-creds"),
+				gen.SetAgentRepositoryVendor(tc.vendor),
+			)
+			r, fakeClient := newSeedReconciler(t, agent, gen.ReadyCluster("default"))
+			reconcileTwice(t, r, agent.Name, agent.Namespace)
+
+			podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
+			by := envByName(podSpec.Containers[0].Env)
+			for _, name := range []string{"GITEA_TOKEN", "FORGEJO_TOKEN"} {
+				token, ok := by[name]
+				require.True(t, ok, "%s must be set", name)
+				require.NotNil(t, token.ValueFrom)
+				assert.Equal(t, "fj-creds", token.ValueFrom.SecretKeyRef.Name)
+				assert.Equal(t, "token", token.ValueFrom.SecretKeyRef.Key)
+				assert.True(t, *token.ValueFrom.SecretKeyRef.Optional)
+			}
+			assert.Equal(t, tc.wantURL, by["GITEA_INSTANCE_URL"].Value, "tea logs in from GITEA_TOKEN + GITEA_INSTANCE_URL")
+			assert.Equal(t, tc.wantHost, by["FORGEJO_HOST"].Value)
+			for _, name := range []string{"GH_TOKEN", "GH_HOST", "GITLAB_TOKEN", "GITLAB_HOST"} {
+				_, ok := by[name]
+				assert.False(t, ok, "%s must not be set for a forgejo repository", name)
+			}
+			for _, init := range podSpec.InitContainers {
+				for _, e := range init.Env {
+					assert.NotEqual(t, "GITEA_TOKEN", e.Name, "the vendor token goes to the agent container only")
+				}
+			}
+			cfg := gitConfig(t, podSpec.Containers[0].Env)
+			_, helper := cfg["credential.https://"+tc.wantHost+".helper"]
+			assert.Equal(t, tc.wantHelper, helper, "HTTPS remotes keep the git credential helper")
+		})
+	}
+}
+
 func TestLanguageAgentController_Repository_GenericVendorHasNoCLIEnv(t *testing.T) {
 	agent := gen.LanguageAgent("git-agent", "default",
 		gen.SetAgentWorkspace("5Gi"),
@@ -1504,7 +1556,7 @@ func TestLanguageAgentController_Repository_GenericVendorHasNoCLIEnv(t *testing.
 
 	podSpec, _ := agentPodView(t, fakeClient, agent.Name, agent.Namespace)
 	by := envByName(podSpec.Containers[0].Env)
-	for _, name := range []string{"GH_TOKEN", "GH_HOST", "GITLAB_TOKEN", "GITLAB_HOST"} {
+	for _, name := range []string{"GH_TOKEN", "GH_HOST", "GITLAB_TOKEN", "GITLAB_HOST", "GITEA_TOKEN", "GITEA_INSTANCE_URL", "FORGEJO_TOKEN", "FORGEJO_HOST"} {
 		_, ok := by[name]
 		assert.False(t, ok, "%s must not be set for a plain git vendor", name)
 	}

@@ -434,23 +434,27 @@ type RepositorySpec struct {
 	// The Secret is mounted read-only into the repository init container and the agent
 	// container, where git authenticates through a credential helper that reads it, so
 	// fetch and push keep working after the clone. The `token` key is also exported to
-	// the vendor's CLI (`GH_TOKEN` for github, `GITLAB_TOKEN` for gitlab).
+	// the vendor's CLI (`GH_TOKEN` for github, `GITLAB_TOKEN` for gitlab, `GITEA_TOKEN`
+	// for forgejo and gitea).
 	// +optional
 	SecretRef *corev1.LocalObjectReference `json:"secretRef,omitempty"`
 
 	// Vendor is the hosting vendor of the repository. It selects which CLI receives the
-	// credential inside the agent container (`gh` for github, `glab` for gitlab; none
-	// for git). Defaulted from the URL host (github.com, gitlab.com), otherwise git.
-	// +kubebuilder:validation:Enum=github;gitlab;git
+	// credential inside the agent container (`gh` for github, `glab` for gitlab, `tea`
+	// for forgejo and its alias gitea; none for git). Defaulted from the URL host
+	// (github.com, gitlab.com, codeberg.org), otherwise git.
+	// +kubebuilder:validation:Enum=github;gitlab;forgejo;gitea;git
 	// +optional
 	Vendor string `json:"vendor,omitempty"`
 }
 
 // Repository vendors.
 const (
-	RepositoryVendorGitHub = "github"
-	RepositoryVendorGitLab = "gitlab"
-	RepositoryVendorGit    = "git"
+	RepositoryVendorGitHub  = "github"
+	RepositoryVendorGitLab  = "gitlab"
+	RepositoryVendorForgejo = "forgejo"
+	RepositoryVendorGitea   = "gitea"
+	RepositoryVendorGit     = "git"
 )
 
 // repositoryScpLikeURL captures the host of the scp-like SSH form (git@host:path).
@@ -472,13 +476,15 @@ func RepositoryHost(raw string) string {
 }
 
 // DefaultRepositoryVendor maps a repository host to a vendor: github.com is github,
-// gitlab.com is gitlab, anything else is git.
+// gitlab.com is gitlab, codeberg.org is forgejo, anything else is git.
 func DefaultRepositoryVendor(raw string) string {
 	switch RepositoryHost(raw) {
 	case "github.com":
 		return RepositoryVendorGitHub
 	case "gitlab.com":
 		return RepositoryVendorGitLab
+	case "codeberg.org":
+		return RepositoryVendorForgejo
 	default:
 		return RepositoryVendorGit
 	}
