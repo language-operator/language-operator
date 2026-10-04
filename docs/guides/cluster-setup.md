@@ -69,7 +69,7 @@ Set `config.agents.storageClassName` in your Helm values to the StorageClass you
 
 ## cert-manager
 
-Language Operator uses admission webhooks, which require TLS certificates. cert-manager provisions these automatically.
+Language Operator uses admission webhooks, and Kubernetes only calls a webhook over TLS. cert-manager provisions and rotates that certificate. This is the only thing the operator needs cert-manager for: Ingress TLS works without it (see [Ingress TLS without cert-manager](#ingress-tls-without-cert-manager)), and you can run without it entirely (see [Running without cert-manager](#running-without-cert-manager)).
 
 Check if cert-manager is already installed:
 
@@ -83,6 +83,18 @@ If not, install it:
 kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.16.3/cert-manager.yaml
 kubectl wait --for=condition=Available deployment --all -n cert-manager --timeout=60s
 ```
+
+### Running without cert-manager
+
+Install the operator with the admission webhooks turned off:
+
+```bash
+--set config.webhook.enabled=false
+```
+
+Field defaults still apply, because they live in the CRD schema and the API server fills them in without any webhook: workspace, resource requests and limits, and tool transport. What you lose is admission validation: cluster membership, the image registry allowlist, and the runtime and cross-field spec checks. `kubectl apply` accepts an invalid resource, and the problem surfaces afterwards as an operator event and a failed status condition on the resource instead of a rejected request.
+
+To keep the webhooks with a certificate from somewhere else, set `config.webhook.certManager.enabled=false` instead. The chart then no longer creates the cert-manager `Certificate` or injects the CA, so you must create the `<release>-webhook-cert` TLS Secret (`language-operator-webhook-cert` with the release name used in the [installation guide](../getting-started/installation.md)) in the operator namespace and set `caBundle` on the `<release>-mutating-webhook` and `<release>-validating-webhook` configurations yourself, and keep both current when the certificate rotates.
 
 
 ## Traefik
@@ -192,6 +204,69 @@ These are included in the `helm install` command on the [installation page](../g
 !!! tip "DNS must resolve before HTTP-01 challenge"
     cert-manager proves domain ownership by serving a token over HTTP. Ensure your DNS records point to the Traefik IP before creating any `LanguageCluster` with a domain.
 
+## Ingress TLS without cert-manager
+
+A `LanguageCluster` with `spec.domain` gets an Ingress for each service-mode agent (`<agent>.<domain>`), for the gateway (`gateway.<domain>`) when `spec.ingress.enabled` is `true`, and for the login page (`auth.<domain>`) when embedded Dex is on. None of these need cert-manager. Two settings on the cluster decide how they are served:
+
+- **`spec.ingress.tls.mode`** chooses where each Ingress gets its certificate:
+    - `auto` (the default) uses the operator's cert-manager issuer (`config.tls.certificateIssuerName`). With no issuer configured, the Ingress has no TLS block.
+    - `secret` always uses the existing TLS Secret named in `spec.ingress.tls.secretName`. Setting `secretName` without a mode implies `secret`.
+    - `none` never adds a TLS block, even when an issuer is configured.
+- **`spec.ingress.externalScheme`** (`http` or `https`) is the scheme the outside world uses. The operator builds the OIDC issuer URL, OAuth redirect URIs and webhook URLs from it, independently of the Ingress TLS block. It defaults to the operator's `config.tls.externalScheme`, which is `https`.
+
+Leave `config.tls.certificateIssuerName` empty (the chart default) when installing the operator, and pick the case that matches your setup.
+
+### TLS terminated upstream
+
+An external load balancer or reverse proxy holds the certificate and forwards plain HTTP to the ingress controller. The Ingresses need no TLS block, but users still reach the cluster over HTTPS, so the URLs the operator hands out must say `https`:
+
+```yaml
+spec:
+  domain: agents.example.com
+  ingress:
+    tls:
+      mode: none
+    externalScheme: https
+```
+
+`mode: auto` with no issuer gives the same Ingress, but the operator records a warning event on each one, because it can't tell an intentional upstream setup from a forgotten issuer. `mode: none` states the intent and keeps the events quiet.
+
+### Bring your own certificate
+
+Store a certificate that covers every host as a TLS Secret in the cluster's namespace. A wildcard for `*.<domain>` covers the gateway, the agents and `auth.<domain>`. Then point the cluster at it:
+
+```bash
+kubectl create secret tls agents-wildcard-tls \
+  --cert=wildcard.crt --key=wildcard.key \
+  --namespace <cluster-namespace>
+```
+
+```yaml
+spec:
+  domain: agents.example.com
+  ingress:
+    tls:
+      mode: secret
+      secretName: agents-wildcard-tls
+```
+
+The ingress controller terminates TLS with that Secret. You are responsible for renewing it.
+
+### Plain HTTP
+
+For local and development clusters that are reached over HTTP:
+
+```yaml
+spec:
+  domain: agents.127.0.0.1.nip.io
+  ingress:
+    tls:
+      mode: none
+    externalScheme: http
+```
+
+To make `http` the default for every cluster, install the operator with `--set config.tls.externalScheme=http` instead of setting it per cluster.
+
 ## Verifying Cluster Readiness
 
 Run through this checklist before installing:
@@ -206,13 +281,13 @@ kubectl get pods -n kube-system | grep -E 'cilium|calico|weave|antrea'
 # StorageClass available
 kubectl get storageclass
 
-# cert-manager running
+# cert-manager running (unless installing with config.webhook.enabled=false)
 kubectl get pods -n cert-manager
 
 # Traefik running and has external IP
 kubectl get svc -n kube-system traefik 2>/dev/null || kubectl get svc -n traefik traefik
 
-# ClusterIssuers ready
+# ClusterIssuers ready (only if cert-manager issues your Ingress certificates)
 kubectl get clusterissuer
 
 # Sufficient node resources (operator + Argo controller + gateway + one agent needs ~4Gi RAM)

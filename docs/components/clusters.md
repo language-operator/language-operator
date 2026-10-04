@@ -74,6 +74,21 @@ spec:
 
 See [LanguageCluster API Reference](../api/languagecluster.md#network-isolation) for the full `NetworkPeer` field reference.
 
+## Ingress TLS
+
+With `spec.domain` set, the operator creates Ingresses for service-mode agents, the gateway (when `spec.ingress.enabled` is `true`) and embedded Dex. `spec.ingress.tls.mode` chooses where they get a certificate: `auto` (the operator's cert-manager issuer, or no TLS when none is configured), `secret` (an existing TLS Secret named in `spec.ingress.tls.secretName`), or `none`. `spec.ingress.externalScheme` sets the public scheme used in OIDC and webhook URLs, for when TLS terminates upstream of the cluster.
+
+```yaml
+spec:
+  domain: agents.example.com
+  ingress:
+    tls:
+      mode: secret
+      secretName: agents-wildcard-tls
+```
+
+cert-manager is optional for all of this. See [Ingress TLS without cert-manager](../guides/cluster-setup.md#ingress-tls-without-cert-manager) for upstream termination, bring-your-own certificates and plain HTTP.
+
 ## Authentication
 
 `LanguageCluster.spec.auth` is the cluster-wide authentication switch. Setting `auth.enabled: true` provisions OIDC authentication for the namespace. There are two mutually exclusive paths under `auth.oidc`:
