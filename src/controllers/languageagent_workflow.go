@@ -222,15 +222,13 @@ func (r *LanguageAgentReconciler) buildAgentPodSpec(ctx context.Context, agent *
 	volumes, volumeMounts := r.buildVolumes(ctx, agent)
 	// Append seed ConfigMap volumes (not mounted in main container; used by workspace-seeder init container).
 	volumes = append(volumes, buildWorkspaceSeedVolumes(agent)...)
-	// Append git credential volume (mounted in the repository init container and the agent container).
+	// Append git credential and CLI config volumes (mounted in the repository init container and the agent container).
 	volumes = append(volumes, buildRepositoryVolumes(agent)...)
 	// Append scratch volumes for stdio sidecar bridges (mounted only in their sidecar containers).
 	volumes = append(volumes, sidecarVolumes...)
 	volumes = append(volumes, agent.Spec.Deployment.Volumes...)
 	build.volumes = volumes
-	if credMount := buildRepositoryCredentialMount(agent); credMount != nil {
-		volumeMounts = append(volumeMounts, *credMount)
-	}
+	volumeMounts = append(volumeMounts, buildRepositoryMounts(agent)...)
 	build.container.VolumeMounts = append(volumeMounts, agent.Spec.Deployment.VolumeMounts...)
 
 	return build, nil

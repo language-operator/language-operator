@@ -433,9 +433,11 @@ type RepositorySpec struct {
 	// Recognized keys: `token` or `username`+`password` (HTTPS), `ssh-privatekey` (SSH).
 	// The Secret is mounted read-only into the repository init container and the agent
 	// container, where git authenticates through a credential helper that reads it, so
-	// fetch and push keep working after the clone. The `token` key is also exported to
-	// the vendor's CLI (`GH_TOKEN` for github, `GITLAB_TOKEN` for gitlab, `GITEA_TOKEN`
-	// for forgejo and gitea).
+	// fetch and push keep working after the clone. The `token` key also authenticates
+	// the vendor's CLI: written to a config file for `gh` (github, via `GH_CONFIG_DIR`)
+	// and `glab` (gitlab, via `GLAB_CONFIG_DIR`), so it stays out of the environment;
+	// exported as `GITEA_TOKEN` for `tea` (forgejo and gitea), which has no config
+	// directory setting.
 	// +optional
 	SecretRef *corev1.LocalObjectReference `json:"secretRef,omitempty"`
 
