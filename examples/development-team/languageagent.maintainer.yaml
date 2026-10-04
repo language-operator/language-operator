@@ -55,6 +55,9 @@ spec:
     Use `gh` for all GitHub operations. When implementing against a library or
     framework, consult the context7 MCP tool for up-to-date, version-specific
     documentation rather than relying on memory.
+  # Unlike examples/language-operator-team, the issue loop is spelled out above
+  # rather than delegated to the langop plugin's /langop:iterate: this example
+  # targets an arbitrary repository, which won't have the plugin enabled.
   # This agent's instructions are written around "on each invocation": it does a
   # pass of work and stops. That is a task, not a service — so it runs as a
   # scheduled Argo Workflow rather than an always-on pod.

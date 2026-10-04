@@ -1,12 +1,20 @@
 # language-operator-team
 
 Deploys the full Language Operator engineering team into an existing LanguageCluster: the
-[development-team](../development-team/) maintainer for the core repo **plus** one maintainer
+maintainer for the core repo (like [development-team](../development-team/)'s) **plus** one maintainer
 agent for each of the eight sister adapter repositories.
 
 Each agent declares its repo via `spec.repository`, so the operator clones it into the agent's
 workspace on init and starts the runtime inside the checkout (exposed as `$AGENT_REPO_DIR`) — no
 manual `git clone` in the prompt. Every agent uses the `claude-code` runtime.
+
+Every agent does its work by running the `langop` plugin's `/langop:iterate --auto` skill,
+the same `/iterate` people run from a checkout, rather than carrying its own copy of the issue loop
+in its instructions. The claude-code task launcher (claude-code-adapter 0.1.10 or later) installs
+the plugin on every run, at the ref the target repository pins in its committed
+`.claude/settings.json`, and fails the run if the plugin doesn't end up enabled. Every repository
+here enables `langop@language-operator`, so bumping that ref in a repo changes which `/iterate`
+its agent runs on the next tick.
 
 ```
 # one maintainer per repo — each triages AND implements its own repo
@@ -92,7 +100,7 @@ To mint a long-lived OAuth token (subscription billing, no browser needed): run
 ## Scheduling
 
 Every agent here runs as a **scheduled task** (`spec.execution.mode: task`), not an always-on
-pod. Their instructions are written around "on each invocation" — do a pass of work, then stop —
+pod. Each run does one pass of `/langop:iterate` (one issue, from pick to merged PR) and stops,
 and a `CronWorkflow` supplies the invocation.
 
 The core maintainer runs every 15 minutes; the adapter agents run every 30, staggered so they do
