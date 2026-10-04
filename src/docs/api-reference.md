@@ -216,6 +216,22 @@ _Appears in:_
 | `valueFrom` _[RuntimeSecretRef](#runtimesecretref)_ | ValueFrom references an existing Secret whose keys are injected via envFrom.<br />When set, the operator does not create or manage a Secret for this entry.<br />Mutually exclusive with Value. |  | Optional: \{\} <br /> |
 
 
+#### CredentialsSecretReference
+
+
+
+CredentialsSecretReference references a whole Secret.
+
+
+
+_Appears in:_
+- [LanguageModelSpec](#languagemodelspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ | Name is the name of the secret |  | Required: \{\} <br /> |
+
+
 #### DeploymentSpec
 
 
@@ -689,10 +705,18 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `provider` _string_ | Provider specifies the LLM provider type |  | Enum: [openai anthropic openai-compatible azure bedrock vertex custom] <br />Required: \{\} <br /> |
-| `modelName` _string_ | ModelName is the specific model identifier (e.g., "gpt-4", "claude-3-opus") |  | MinLength: 1 <br />Required: \{\} <br /> |
-| `endpoint` _string_ | Endpoint is the API endpoint URL (required for openai-compatible, azure, custom) |  | Optional: \{\} <br /> |
-| `apiKeySecretRef` _[SecretReference](#secretreference)_ | APIKeySecretRef references a secret containing the API key |  | Optional: \{\} <br /> |
+| `provider` _string_ | Provider is one of the providers the operator documents and validates.<br />For any other LiteLLM provider, set litellmProvider instead.<br />"custom" is deprecated and behaves exactly like "openai-compatible". |  | Enum: [openai anthropic gemini openai-compatible azure bedrock vertex custom] <br />Optional: \{\} <br /> |
+| `litellmProvider` _string_ | LiteLLMProvider is a LiteLLM provider prefix (e.g. "deepseek", "dashscope",<br />"hosted_vllm") for providers not covered by Provider. The gateway calls the<br />model as "<litellmProvider>/<modelName>". |  | Pattern: `^[a-z0-9_]+$` <br />Optional: \{\} <br /> |
+| `modelName` _string_ | ModelName is the specific model identifier (e.g., "gpt-4", "claude-3-opus"), or<br />"*" for a wildcard model that stands for the provider's whole catalogue: agents<br />then pick a model with spec.models[].model and call it as "<name>/<model>". |  | MinLength: 1 <br />Required: \{\} <br /> |
+| `aliases` _string array_ | Aliases are extra names the gateway answers to for this model, for clients<br />that ask for fixed model names of their own (e.g. Gemini CLI calling<br />"gemini-3.1-flash-lite" for its helper tasks). A request for an alias is<br />served by this model. An alias equal to another LanguageModel's modelName,<br />or one already claimed by another LanguageModel, is ignored with a warning<br />in the gateway log. Not allowed on a wildcard model. |  | MaxItems: 64 <br />items:MaxLength: 253 <br />items:MinLength: 1 <br />items:Pattern: `^\S+$` <br />Optional: \{\} <br /> |
+| `endpoint` _string_ | Endpoint is the API endpoint URL (required for openai-compatible and azure) |  | Optional: \{\} <br /> |
+| `apiKeySecretRef` _[SecretReference](#secretreference)_ | APIKeySecretRef references a secret containing the API key. Shorthand for<br />a single key; takes precedence over an API key in CredentialsSecretRef. |  | Optional: \{\} <br /> |
+| `credentialsSecretRef` _[CredentialsSecretReference](#credentialssecretreference)_ | CredentialsSecretRef references a Secret whose keys are this model's<br />credentials, for providers that need more than one value: AWS access keys<br />or a Bedrock bearer token, a Vertex service-account JSON, Azure AD app<br />credentials. Keys are matched by name (e.g. AWS_ACCESS_KEY_ID,<br />AWS_BEARER_TOKEN_BEDROCK, VERTEX_CREDENTIALS, AZURE_CLIENT_SECRET) and<br />applied to this model only. |  | Optional: \{\} <br /> |
+| `region` _string_ | Region is the cloud region (Bedrock: the AWS region). |  | Optional: \{\} <br /> |
+| `project` _string_ | Project is the cloud project (Vertex: the GCP project ID). |  | Optional: \{\} <br /> |
+| `location` _string_ | Location is the cloud location (Vertex: e.g. "us-central1"). |  | Optional: \{\} <br /> |
+| `apiVersion` _string_ | APIVersion is the provider API version (Azure: e.g. "2025-01-01-preview"). |  | Optional: \{\} <br /> |
+| `params` _object (keys:string, values:[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#json-v1-apiextensions-k8s-io))_ | Params are passed through into this model's LiteLLM params, overriding the<br />values derived from the fields above (e.g. aws_bedrock_runtime_endpoint,<br />extra_headers, use_chat_completions_api). Credentials do not belong here:<br />keys that name one are rejected; use credentialsSecretRef. |  | Optional: \{\} <br /> |
 | `rateLimits` _[RateLimitSpec](#ratelimitspec)_ | RateLimits defines rate limiting configuration |  | Optional: \{\} <br /> |
 | `timeout` _string_ | Timeout specifies request timeout duration (e.g., "5m", "30s") | 5m | Pattern: `^[0-9]+(ns\|us\|µs\|ms\|s\|m\|h)$` <br />Optional: \{\} <br /> |
 
@@ -883,6 +907,7 @@ _Appears in:_
 | `name` _string_ | Name is the name of the LanguageModel |  | MaxLength: 63 <br />Pattern: `^[a-z0-9]([-a-z0-9]*[a-z0-9])?$` <br />Required: \{\} <br /> |
 | `role` _string_ | Role defines the purpose of this model — a hint for the agent runtime for model selection<br />(e.g. prefer role=primary for general calls, role=reasoning for chain-of-thought).<br />The operator does not enforce routing by role; it is surfaced in the agent config (agent.json). | primary | Enum: [primary fallback reasoning tool-calling summarization] <br />Optional: \{\} <br /> |
 | `priority` _integer_ | Priority for model selection — a hint for the agent runtime (lower value = higher priority).<br />The operator does not enforce priority; it is surfaced in the agent config (agent.json). |  | Optional: \{\} <br /> |
+| `model` _string_ | Model picks a model from a wildcard LanguageModel (one whose modelName is "*"),<br />by the vendor's own name, e.g. "anthropic/claude-sonnet-4.5" from OpenRouter.<br />The agent then calls the gateway with "<LanguageModel name>/<model>".<br />Required for a wildcard LanguageModel and not allowed for any other. |  | Optional: \{\} <br /> |
 
 
 #### NetworkEgressRule

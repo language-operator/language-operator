@@ -332,6 +332,33 @@ def warn_shared_model_names(specs: List[Dict[str, Any]]) -> None:
                   file=sys.stderr)
 
 
+def build_model_group_aliases(specs: List[Dict[str, Any]]) -> Dict[str, str]:
+    """Map each LanguageModel alias onto its modelName, for router_settings.model_group_alias.
+
+    LiteLLM resolves a real model name before an alias, so an alias equal to a
+    modelName would never be used; and two models cannot answer to one alias.
+    Both are dropped with a warning instead of passed on. The first model, in
+    the specs' (sorted file) order, keeps a contested alias.
+    """
+    model_names = {spec.get("modelName") for spec in specs}
+    aliases: Dict[str, str] = {}
+    for spec in specs:
+        model_name = spec.get("modelName")
+        if model_name == WILDCARD:
+            continue
+        for alias in spec.get("aliases") or []:
+            if alias in model_names:
+                print(f"⚠ Alias {alias!r} of {model_name!r} is the modelName of a LanguageModel, which takes precedence: ignoring the alias",
+                      file=sys.stderr)
+            elif alias in aliases:
+                if aliases[alias] != model_name:
+                    print(f"⚠ Alias {alias!r} is claimed by both {aliases[alias]!r} and {model_name!r}: keeping {aliases[alias]!r}",
+                          file=sys.stderr)
+            else:
+                aliases[alias] = model_name
+    return aliases
+
+
 def deep_merge(base: Dict[str, Any], extra: Dict[str, Any]) -> Dict[str, Any]:
     """Merge ``extra`` into ``base``: mappings merge recursively, anything else is replaced."""
     merged = dict(base)
@@ -397,6 +424,10 @@ def generate_litellm_config(specs: List[Dict[str, Any]]) -> Dict[str, Any]:
         all_models.extend(build_model_list(spec, api_key, credentials))
     config["model_list"] = all_models
     warn_shared_model_names(specs)
+
+    aliases = build_model_group_aliases(specs)
+    if aliases:
+        config["router_settings"] = {"model_group_alias": aliases}
 
     if specs:
         config["litellm_settings"] = build_litellm_settings(spec.get("provider") or spec.get("litellmProvider") for spec in specs)

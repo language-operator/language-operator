@@ -251,6 +251,27 @@ Because this also happens by accident, the operator's admission webhook warns wh
 
 See [examples/multi-endpoint-loadbalanced.yaml](examples/multi-endpoint-loadbalanced.yaml)
 
+### Model Aliases (e.g. for Gemini CLI)
+
+`spec.aliases` gives a model extra names, for clients that ask for fixed model names of their own. `generate-config.py` turns them into LiteLLM's `router_settings.model_group_alias`, mapping each alias onto the model's `modelName`:
+
+```yaml
+spec:
+  provider: anthropic
+  modelName: claude-sonnet-4-5
+  aliases: [gemini-3.1-pro-preview, gemini-3.1-flash-lite]
+```
+
+```yaml
+# generated
+router_settings:
+  model_group_alias:
+    gemini-3.1-pro-preview: claude-sonnet-4-5
+    gemini-3.1-flash-lite: claude-sonnet-4-5
+```
+
+LiteLLM resolves a real model name before an alias, so an alias equal to any `modelName` is dropped with a warning, as is one already claimed by another model. `LANGOP_GATEWAY_EXTRA_CONFIG` merges over the generated `router_settings`. Gemini-format clients reach the gateway at `/v1beta/models/<model>:generateContent` and send the agent key as `x-goog-api-key`; the full Gemini CLI alias set is in the [Models](../../docs/components/models.md#gemini-cli) docs.
+
 ## Rate Limiting Behavior
 
 Rate limits are enforced by LiteLLM at the proxy level:

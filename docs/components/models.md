@@ -222,6 +222,61 @@ spec:
 
 Because the same thing happens by accident, for example two models with the same `modelName` but different providers or keys, creating or updating a LanguageModel whose `modelName` is already taken returns a warning naming the other models, and the gateway logs one on start. Give each model a distinct `modelName` if you want them addressed separately.
 
+### Model aliases: answering to a client's model names
+
+Some clients ask for fixed model names of their own instead of the one you configured. `spec.aliases` lists extra names the gateway serves with a LanguageModel. A request for an alias goes to that model, on every API the gateway speaks (OpenAI, Anthropic and Gemini formats), and aliases appear in the gateway's `/v1/models` list.
+
+```yaml
+apiVersion: langop.io/v1alpha1
+kind: LanguageModel
+metadata:
+  name: claude-sonnet
+spec:
+  provider: anthropic
+  modelName: claude-sonnet-4-5
+  apiKeySecretRef:
+    name: anthropic-credentials
+  aliases:
+    - gemini-3.1-pro-preview
+    - gemini-3.1-flash-lite
+```
+
+- A real `modelName` always wins over an alias: an alias equal to any LanguageModel's `modelName` is ignored, with a warning in the gateway log.
+- An alias belongs to one model. If two LanguageModels claim it, the first in name order keeps it and the gateway logs a warning. Load-balanced models that share a `modelName` may list the same alias.
+- A wildcard model (`modelName: "*"`) cannot have aliases.
+- A name that is neither a `modelName` nor an alias gets an immediate `400 Invalid model name`, so a missing alias shows up as a fast error, not a hang.
+
+#### Gemini CLI
+
+[Gemini CLI](https://github.com/google-gemini/gemini-cli) speaks only the Gemini API, which the gateway serves at `/v1beta/models/<model>:generateContent` and `:streamGenerateContent`. Inside an agent, point it at the gateway with the agent's own key:
+
+```bash
+export GOOGLE_GEMINI_BASE_URL="$MODEL_ENDPOINT"
+export GEMINI_API_KEY="$MODEL_API_KEY"
+gemini -p "say hi"
+```
+
+The CLI calls several Gemini model IDs besides the one you choose: a classifier picks a model per turn, and helpers for summarising, prompt completion and edit correction use a flash-lite model. Each of those IDs must be an alias, or the call fails with `400`. As of Gemini CLI v0.62.0 (`packages/core/src/config/defaultModelConfigs.ts`), the full set is:
+
+```yaml
+  aliases:
+    - gemini-2.5-pro
+    - gemini-2.5-flash
+    - gemini-2.5-flash-lite
+    - gemini-3-pro-preview
+    - gemini-3-flash-preview
+    - gemini-3-flash
+    - gemini-3.1-pro-preview
+    - gemini-3.1-pro-preview-customtools
+    - gemini-3.1-flash-lite
+    - gemini-3.1-flash-lite-preview
+    - gemini-3.5-flash
+    - gemini-3.5-flash-lite
+    - gemini-3.8-flash
+```
+
+The set changes between CLI releases, so check it against the CLI version you run. To send the CLI's main and helper calls to different models, split the list across two LanguageModels, for example the `pro` IDs on a large model and the `flash`/`flash-lite` IDs on a small one.
+
 ## Advanced: Extra Gateway Configuration
 
 For LiteLLM settings with no `LanguageModel` field (retries, fallbacks, caching, spend callbacks, or a hand-written model entry) set `LANGOP_GATEWAY_EXTRA_CONFIG` on the gateway. It is a YAML mapping deep-merged into the generated LiteLLM config: mappings merge recursively, lists and scalars replace.

@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -431,6 +432,59 @@ func TestWebhookClusterMembershipModel(t *testing.T) {
 		}
 	})
 
+}
+
+// TestLanguageModelAliasesSchema verifies the CRD schema rules on spec.aliases:
+// aliases are allowed on a named model, rejected on a wildcard, and must be unique.
+func TestLanguageModelAliasesSchema(t *testing.T) {
+	ns := "model-aliases-cluster"
+	nsObj := &corev1.Namespace{}
+	nsObj.Name = ns
+	nsObj.Labels = map[string]string{langoplabels.LabelKeyLangopCluster: ns}
+	if err := k8sClient.Create(ctx, nsObj); err != nil && !errors.IsAlreadyExists(err) {
+		t.Fatalf("create namespace: %v", err)
+	}
+	cluster := gen.LanguageCluster(ns)
+	if err := k8sClient.Create(ctx, cluster); err != nil && !errors.IsAlreadyExists(err) {
+		t.Fatalf("create LanguageCluster: %v", err)
+	}
+	t.Cleanup(func() { _ = k8sClient.Delete(ctx, cluster) })
+
+	tests := []struct {
+		name    string
+		mods    []gen.LanguageModelModifier
+		wantErr string
+	}{
+		{"named model with aliases", []gen.LanguageModelModifier{
+			gen.SetModelProvider("anthropic"), gen.SetModelName("claude-sonnet-4"),
+			gen.SetModelAliases("gemini-3.1-pro-preview", "gemini-3.1-flash-lite")}, ""},
+		{"wildcard with aliases", []gen.LanguageModelModifier{
+			gen.SetModelProvider("anthropic"), gen.SetModelName("*"), gen.SetModelAliases("flash")},
+			"aliases cannot be set on a wildcard model"},
+		{"duplicate alias", []gen.LanguageModelModifier{
+			gen.SetModelProvider("anthropic"), gen.SetModelName("claude-sonnet-4"), gen.SetModelAliases("flash", "flash")},
+			"Duplicate value"},
+		{"alias with whitespace", []gen.LanguageModelModifier{
+			gen.SetModelProvider("anthropic"), gen.SetModelName("claude-sonnet-4"), gen.SetModelAliases("flash lite")},
+			"should match"},
+	}
+	for i, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			model := gen.LanguageModel(fmt.Sprintf("aliases-%d", i), ns, tt.mods...)
+			err := k8sClient.Create(ctx, model)
+			if err == nil {
+				t.Cleanup(func() { _ = k8sClient.Delete(ctx, model) })
+			}
+			switch {
+			case tt.wantErr == "" && err != nil:
+				t.Errorf("expected success, got: %v", err)
+			case tt.wantErr != "" && err == nil:
+				t.Errorf("expected rejection containing %q, but it was created", tt.wantErr)
+			case tt.wantErr != "" && !strings.Contains(err.Error(), tt.wantErr):
+				t.Errorf("expected rejection containing %q, got: %v", tt.wantErr, err)
+			}
+		})
+	}
 }
 
 // TestWebhookClusterMembershipPersona verifies that the admission webhook enforces

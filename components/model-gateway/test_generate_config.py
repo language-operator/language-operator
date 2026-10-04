@@ -396,3 +396,48 @@ class TestWildcardModels:
         generate_config.warn_shared_model_names([
             {"_name": "a", "modelName": "*"}, {"_name": "b", "modelName": "*"}])
         assert capsys.readouterr().err == ""
+
+
+class TestModelAliases:
+    QWEN = {"provider": "openai-compatible", "modelName": "qwen", "endpoint": "http://qwen:8000/v1"}
+
+    def config(self, *specs, env=None):
+        return generate_config.apply_operator_settings(
+            generate_config.generate_litellm_config(list(specs)), env or {})
+
+    def test_aliases_become_model_group_aliases(self):
+        cfg = self.config({**self.QWEN, "aliases": ["gemini-3.1-pro-preview", "gemini-3.1-flash-lite"]})
+        assert cfg["router_settings"]["model_group_alias"] == {
+            "gemini-3.1-pro-preview": "qwen", "gemini-3.1-flash-lite": "qwen"}
+        assert [m["model_name"] for m in cfg["model_list"]] == ["qwen"], "aliases add no deployments"
+
+    def test_no_aliases_no_router_settings(self):
+        assert "router_settings" not in self.config(self.QWEN)
+
+    def test_alias_shadowed_by_a_model_name_is_dropped(self, capsys):
+        gemini = {"provider": "gemini", "modelName": "gemini-2.5-pro"}
+        cfg = self.config({**self.QWEN, "aliases": ["gemini-2.5-pro", "gemini-3.5-flash"]}, gemini)
+        assert cfg["router_settings"]["model_group_alias"] == {"gemini-3.5-flash": "qwen"}
+        assert "'gemini-2.5-pro' of 'qwen' is the modelName" in capsys.readouterr().err
+
+    def test_contested_alias_keeps_the_first_model(self, capsys):
+        llama = {"provider": "openai-compatible", "modelName": "llama", "endpoint": "http://llama/v1", "aliases": ["flash"]}
+        cfg = self.config({**self.QWEN, "aliases": ["flash"]}, llama)
+        assert cfg["router_settings"]["model_group_alias"] == {"flash": "qwen"}
+        assert "claimed by both 'qwen' and 'llama'" in capsys.readouterr().err
+
+    def test_load_balanced_models_may_share_an_alias(self, capsys):
+        second = {**self.QWEN, "endpoint": "http://qwen-2:8000/v1", "aliases": ["flash"]}
+        cfg = self.config({**self.QWEN, "aliases": ["flash"]}, second)
+        assert cfg["router_settings"]["model_group_alias"] == {"flash": "qwen"}
+        assert "claimed by both" not in capsys.readouterr().err
+
+    def test_wildcard_aliases_are_ignored(self):
+        wildcard = {"_name": "or", "provider": "openai-compatible", "modelName": "*", "endpoint": "https://x/v1", "aliases": ["flash"]}
+        assert "router_settings" not in self.config(wildcard)
+
+    def test_extra_config_merges_over_generated_aliases(self):
+        extra = "router_settings:\n  model_group_alias:\n    flash: other\n  routing_strategy: simple-shuffle\n"
+        cfg = self.config({**self.QWEN, "aliases": ["flash", "pro"]}, env={"LANGOP_GATEWAY_EXTRA_CONFIG": extra})
+        assert cfg["router_settings"] == {
+            "model_group_alias": {"flash": "other", "pro": "qwen"}, "routing_strategy": "simple-shuffle"}

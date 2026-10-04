@@ -50,6 +50,13 @@ func SetModelName(name string) LanguageModelModifier {
 	}
 }
 
+// SetModelAliases sets spec.aliases.
+func SetModelAliases(aliases ...string) LanguageModelModifier {
+	return func(m *langopv1alpha1.LanguageModel) {
+		m.Spec.Aliases = aliases
+	}
+}
+
 // SetModelAPIKeySecretRef sets spec.apiKeySecretRef.
 func SetModelAPIKeySecretRef(secretName, key string) LanguageModelModifier {
 	return func(m *langopv1alpha1.LanguageModel) {
