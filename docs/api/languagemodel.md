@@ -66,6 +66,10 @@ The admission webhook rejects a spec that is missing what its `provider` needs (
 
 `modelName: "*"` makes the LanguageModel stand for the provider's whole catalogue. Agents choose a model with `spec.models[].model` and call it as `<LanguageModel name>/<model>`. See [Wildcard models](../components/models.md#wildcard-models-a-whole-vendor-catalogue).
 
+### Aliases
+
+`aliases` lists extra names the gateway serves with this model, for clients such as Gemini CLI that ask for fixed model names of their own. Up to 64 unique names without whitespace, not allowed on a wildcard model. See [Model aliases](../components/models.md#model-aliases-answering-to-a-clients-model-names).
+
 ### Typed fields and `params`
 
 | Field | LiteLLM param | Used by |

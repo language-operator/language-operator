@@ -1185,7 +1185,7 @@ func TestLanguageClusterController_GatewayImageChangeRollsDeployment(t *testing.
 func TestLanguageClusterController_GatewayConfigMapContainsModel(t *testing.T) {
 	scheme := testutil.SetupTestScheme(t)
 	cluster := gen.LanguageCluster("model-cluster")
-	model := gen.LanguageModel("gpt-4", cluster.Name)
+	model := gen.LanguageModel("gpt-4", cluster.Name, gen.SetModelAliases("gemini-3.1-pro-preview"))
 
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
@@ -1215,6 +1215,7 @@ func TestLanguageClusterController_GatewayConfigMapContainsModel(t *testing.T) {
 	require.True(t, ok, "gateway-config ConfigMap must contain key %q for LanguageModel gpt-4", key)
 	assert.NotEmpty(t, val, "model config JSON must not be empty")
 	assert.Contains(t, val, "anthropic", "model config JSON must include provider field")
+	assert.Contains(t, val, `"aliases":["gemini-3.1-pro-preview"]`, "the gateway reads aliases from the model config JSON")
 }
 
 func TestLanguageClusterController_GatewayServicePort(t *testing.T) {

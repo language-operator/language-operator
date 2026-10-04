@@ -56,6 +56,22 @@ spec:
           spec:
             description: LanguageModelSpec defines the desired state of LanguageModel
             properties:
+              aliases:
+                description: |-
+                  Aliases are extra names the gateway answers to for this model, for clients
+                  that ask for fixed model names of their own (e.g. Gemini CLI calling
+                  "gemini-3.1-flash-lite" for its helper tasks). A request for an alias is
+                  served by this model. An alias equal to another LanguageModel's modelName,
+                  or one already claimed by another LanguageModel, is ignored with a warning
+                  in the gateway log. Not allowed on a wildcard model.
+                items:
+                  maxLength: 253
+                  minLength: 1
+                  pattern: ^\S+$
+                  type: string
+                maxItems: 64
+                type: array
+                x-kubernetes-list-type: set
               apiKeySecretRef:
                 description: |-
                   APIKeySecretRef references a secret containing the API key. Shorthand for
@@ -166,6 +182,8 @@ spec:
             x-kubernetes-validations:
             - message: set exactly one of provider or litellmProvider
               rule: has(self.provider) != has(self.litellmProvider)
+            - message: aliases cannot be set on a wildcard model
+              rule: self.modelName != '*' || !has(self.aliases)
           status:
             description: LanguageModelStatus defines the observed state of LanguageModel
             properties:

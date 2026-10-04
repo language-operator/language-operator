@@ -7,6 +7,7 @@ import (
 
 // LanguageModelSpec defines the desired state of LanguageModel
 // +kubebuilder:validation:XValidation:rule="has(self.provider) != has(self.litellmProvider)",message="set exactly one of provider or litellmProvider"
+// +kubebuilder:validation:XValidation:rule="self.modelName != '*' || !has(self.aliases)",message="aliases cannot be set on a wildcard model"
 type LanguageModelSpec struct {
 	// Provider is one of the providers the operator documents and validates.
 	// For any other LiteLLM provider, set litellmProvider instead.
@@ -28,6 +29,20 @@ type LanguageModelSpec struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
 	ModelName string `json:"modelName"`
+
+	// Aliases are extra names the gateway answers to for this model, for clients
+	// that ask for fixed model names of their own (e.g. Gemini CLI calling
+	// "gemini-3.1-flash-lite" for its helper tasks). A request for an alias is
+	// served by this model. An alias equal to another LanguageModel's modelName,
+	// or one already claimed by another LanguageModel, is ignored with a warning
+	// in the gateway log. Not allowed on a wildcard model.
+	// +listType=set
+	// +kubebuilder:validation:MaxItems=64
+	// +kubebuilder:validation:items:MinLength=1
+	// +kubebuilder:validation:items:MaxLength=253
+	// +kubebuilder:validation:items:Pattern=`^\S+$`
+	// +optional
+	Aliases []string `json:"aliases,omitempty"`
 
 	// Endpoint is the API endpoint URL (required for openai-compatible and azure)
 	// +optional
