@@ -5716,7 +5716,7 @@ desired source. Follows the WorkspaceSpec/CredentialSpec conventions.</p>
 </tr>
 <tr>
 <td><code>secretRef</code> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#localobjectreference-v1-core">LocalObjectReference</a></em></td>
-<td>SecretRef references a Secret with git credentials for private repos.<br />Recognized keys: <code>token</code> or <code>username</code>+<code>password</code> (HTTPS), <code>ssh-privatekey</code> (SSH).<br />The Secret is mounted read-only into the repository init container and the agent<br />container, where git authenticates through a credential helper that reads it, so<br />fetch and push keep working after the clone. The <code>token</code> key is also exported to<br />the vendor's CLI (<code>GH_TOKEN</code> for github, <code>GITLAB_TOKEN</code> for gitlab, <code>GITEA_TOKEN</code><br />for forgejo and gitea).</td>
+<td>SecretRef references a Secret with git credentials for private repos.<br />Recognized keys: <code>token</code> or <code>username</code>+<code>password</code> (HTTPS), <code>ssh-privatekey</code> (SSH).<br />The Secret is mounted read-only into the repository init container and the agent<br />container, where git authenticates through a credential helper that reads it, so<br />fetch and push keep working after the clone. The <code>token</code> key also authenticates<br />the vendor's CLI: written to a config file for <code>gh</code> (github, via <code>GH_CONFIG_DIR</code>)<br />and <code>glab</code> (gitlab, via <code>GLAB_CONFIG_DIR</code>), so it stays out of the environment;<br />exported as <code>GITEA_TOKEN</code> for <code>tea</code> (forgejo and gitea), which has no config<br />directory setting.</td>
 <td></td>
 <td>Optional: {} <br /></td>
 </tr>
