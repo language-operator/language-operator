@@ -2108,8 +2108,8 @@
 <td>Git identity and credentials for <code>spec.repository</code>; agent and <code>repository</code> init containers only</td>
 </tr>
 <tr>
-<td><code>GH_TOKEN</code> / <code>GITLAB_TOKEN</code></td>
-<td>The repository Secret's <code>token</code> for the vendor CLI (<code>gh</code>, <code>glab</code>); agent container only</td>
+<td><code>GH_TOKEN</code> / <code>GITLAB_TOKEN</code> / <code>GITEA_TOKEN</code></td>
+<td>The repository Secret's <code>token</code> for the vendor CLI (<code>gh</code>, <code>glab</code>, <code>tea</code>, with <code>GITEA_INSTANCE_URL</code> and <code>FORGEJO_TOKEN</code>/<code>FORGEJO_HOST</code> for Forgejo); agent container only</td>
 </tr>
 <tr>
 <td><code>OTEL_EXPORTER_OTLP_ENDPOINT</code></td>
@@ -2217,11 +2217,11 @@
 <tr>
 <td><code>spec.repository.vendor</code></td>
 <td>from the host</td>
-<td><code>github</code>, <code>gitlab</code> or <code>git</code>; selects the CLI that receives the token (<code>gh</code>, <code>glab</code>, none)</td>
+<td><code>github</code>, <code>gitlab</code>, <code>forgejo</code> (alias <code>gitea</code>) or <code>git</code>; selects the CLI that receives the token (<code>gh</code>, <code>glab</code>, <code>tea</code>, none)</td>
 </tr>
 </tbody>
 </table>
-<p>When <code>secretRef</code> is set, the Secret is mounted read-only at <code>/var/run/secrets/langop.io/git</code> into the <code>repository</code> init container and the agent container; the operator never reads its contents. Git is configured through <code>GIT_CONFIG_*</code> environment variables: a default commit identity (<code>&lt;name&gt;@&lt;namespace&gt;.langop.io</code>, overridable with <code>GIT_AUTHOR_*</code>/<code>GIT_COMMITTER_*</code>), a host-scoped credential helper for HTTPS remotes or <code>GIT_SSH_COMMAND</code> for SSH remotes, so fetch and push work after the clone. The Secret's <code>token</code> is also exported as <code>GH_TOKEN</code> or <code>GITLAB_TOKEN</code> by vendor. See the <a href="../../api/languageagent/#git-and-cli-authentication">LanguageAgent API reference</a> for details.</p>
+<p>When <code>secretRef</code> is set, the Secret is mounted read-only at <code>/var/run/secrets/langop.io/git</code> into the <code>repository</code> init container and the agent container; the operator never reads its contents. Git is configured through <code>GIT_CONFIG_*</code> environment variables: a default commit identity (<code>&lt;name&gt;@&lt;namespace&gt;.langop.io</code>, overridable with <code>GIT_AUTHOR_*</code>/<code>GIT_COMMITTER_*</code>), a host-scoped credential helper for HTTPS remotes or <code>GIT_SSH_COMMAND</code> for SSH remotes, so fetch and push work after the clone. The Secret's <code>token</code> is also exported as <code>GH_TOKEN</code>, <code>GITLAB_TOKEN</code> or <code>GITEA_TOKEN</code> by vendor. See the <a href="../../api/languageagent/#git-and-cli-authentication">LanguageAgent API reference</a> for details.</p>
 <h2 id="networking">Networking<a class="headerlink" href="#networking" title="Permanent link">&para;</a></h2>
 <p>Every agent gets a <strong>NetworkPolicy</strong> allowing inbound traffic from other agents in the same cluster namespace — add egress for public APIs via <code>spec.networkPolicies</code> (see the <a href="../../guides/network-policies/">Network Policies guide</a>).</p>
 <p>A <strong>service-mode</strong> agent is addressable, and additionally gets:</p>
