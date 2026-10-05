@@ -8,6 +8,28 @@ This document tracks releases of the Language Operator project.
 
 ---
 
+## v0.3.17 — 2026-10-04
+
+**Behavior change:** agents on GitHub and GitLab repositories no longer receive `GH_TOKEN` / `GITLAB_TOKEN` in their environment. The `repository` init container writes `gh`'s `hosts.yml` / `glab`'s `config.yml` into a memory-backed volume and the agent gets `GH_CONFIG_DIR` / `GLAB_CONFIG_DIR`, so `gh` and `glab` stay authenticated with no token in the process environment. Scripts that read `$GH_TOKEN` directly should read `/var/run/secrets/langop.io/git/token` instead. Forgejo/Gitea still export `GITEA_TOKEN` (`tea` has no config-directory setting). (#981)
+
+**Features**
+- repository vendor forgejo exports a tea-ready token (GITEA_TOKEN/GITEA_INSTANCE_URL) (#980)
+- LanguageModel aliases so Gemini CLI can use any model through the gateway (#979)
+
+**Bug Fixes**
+- authenticate gh and glab from a config file instead of GH_TOKEN/GITLAB_TOKEN (#981)
+
+**Documentation**
+- make cert-manager optional in prerequisites; document ingress TLS without it (#978)
+
+**Tests**
+- cover gateway roll on pinned image change; document gateway image pinning (#977)
+
+**Chores**
+- maintainer agents run /langop:iterate from the langop plugin (#982)
+
+---
+
 ## v0.3.16 — 2026-10-03
 
 **Features**
