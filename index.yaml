@@ -2,8 +2,36 @@ apiVersion: v1
 entries:
   language-operator:
   - apiVersion: v2
+    appVersion: 0.3.17
+    created: "2026-10-05T00:11:01.710013808Z"
+    dependencies:
+    - condition: argo-workflows.enabled
+      name: argo-workflows
+      repository: oci://ghcr.io/argoproj/argo-helm
+      version: 2.0.3
+    description: A Kubernetes operator for managing language models, tools, agents,
+      personas, and clients
+    digest: 2834062c3d996b2f2d5e899819e87f49038933afd0942c59866619339e429219
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    - mcp
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-0.3.17.tgz
+    version: 0.3.17
+  - apiVersion: v2
     appVersion: 0.3.16
-    created: "2026-10-03T15:47:04.639952323Z"
+    created: "2026-10-05T00:11:01.699773789Z"
     dependencies:
     - condition: argo-workflows.enabled
       name: argo-workflows
@@ -31,7 +59,7 @@ entries:
     version: 0.3.16
   - apiVersion: v2
     appVersion: 0.3.15
-    created: "2026-10-03T15:47:04.629413875Z"
+    created: "2026-10-05T00:11:01.689489382Z"
     dependencies:
     - condition: argo-workflows.enabled
       name: argo-workflows
@@ -59,7 +87,7 @@ entries:
     version: 0.3.15
   - apiVersion: v2
     appVersion: 0.3.14
-    created: "2026-10-03T15:47:04.618174183Z"
+    created: "2026-10-05T00:11:01.679059278Z"
     dependencies:
     - condition: argo-workflows.enabled
       name: argo-workflows
@@ -87,7 +115,7 @@ entries:
     version: 0.3.14
   - apiVersion: v2
     appVersion: 0.3.13
-    created: "2026-10-03T15:47:04.60575141Z"
+    created: "2026-10-05T00:11:01.665975201Z"
     dependencies:
     - condition: argo-workflows.enabled
       name: argo-workflows
@@ -115,7 +143,7 @@ entries:
     version: 0.3.13
   - apiVersion: v2
     appVersion: 0.3.12
-    created: "2026-10-03T15:47:04.593271029Z"
+    created: "2026-10-05T00:11:01.655912316Z"
     dependencies:
     - condition: argo-workflows.enabled
       name: argo-workflows
@@ -143,7 +171,7 @@ entries:
     version: 0.3.12
   - apiVersion: v2
     appVersion: 0.3.11
-    created: "2026-10-03T15:47:04.582078183Z"
+    created: "2026-10-05T00:11:01.645814677Z"
     dependencies:
     - condition: argo-workflows.enabled
       name: argo-workflows
@@ -171,7 +199,7 @@ entries:
     version: 0.3.11
   - apiVersion: v2
     appVersion: 0.3.10
-    created: "2026-10-03T15:47:04.56924911Z"
+    created: "2026-10-05T00:11:01.635303404Z"
     dependencies:
     - condition: argo-workflows.enabled
       name: argo-workflows
@@ -199,7 +227,7 @@ entries:
     version: 0.3.10
   - apiVersion: v2
     appVersion: 0.3.9
-    created: "2026-10-03T15:47:04.733847627Z"
+    created: "2026-10-05T00:11:01.79506681Z"
     dependencies:
     - condition: argo-workflows.enabled
       name: argo-workflows
@@ -227,7 +255,7 @@ entries:
     version: 0.3.9
   - apiVersion: v2
     appVersion: 0.3.8
-    created: "2026-10-03T15:47:04.722182813Z"
+    created: "2026-10-05T00:11:01.783480618Z"
     dependencies:
     - condition: argo-workflows.enabled
       name: argo-workflows
@@ -255,7 +283,7 @@ entries:
     version: 0.3.8
   - apiVersion: v2
     appVersion: 0.3.7
-    created: "2026-10-03T15:47:04.709425896Z"
+    created: "2026-10-05T00:11:01.770519973Z"
     dependencies:
     - condition: argo-workflows.enabled
       name: argo-workflows
@@ -283,7 +311,7 @@ entries:
     version: 0.3.7
   - apiVersion: v2
     appVersion: 0.3.6
-    created: "2026-10-03T15:47:04.698712353Z"
+    created: "2026-10-05T00:11:01.760546696Z"
     dependencies:
     - condition: argo-workflows.enabled
       name: argo-workflows
@@ -311,7 +339,7 @@ entries:
     version: 0.3.6
   - apiVersion: v2
     appVersion: 0.3.5
-    created: "2026-10-03T15:47:04.686080481Z"
+    created: "2026-10-05T00:11:01.75061787Z"
     dependencies:
     - condition: argo-workflows.enabled
       name: argo-workflows
@@ -339,7 +367,7 @@ entries:
     version: 0.3.5
   - apiVersion: v2
     appVersion: 0.3.4
-    created: "2026-10-03T15:47:04.675828806Z"
+    created: "2026-10-05T00:11:01.740298493Z"
     dependencies:
     - condition: argo-workflows.enabled
       name: argo-workflows
@@ -367,7 +395,7 @@ entries:
     version: 0.3.4
   - apiVersion: v2
     appVersion: 0.3.3
-    created: "2026-10-03T15:47:04.663578552Z"
+    created: "2026-10-05T00:11:01.730132424Z"
     dependencies:
     - condition: argo-workflows.enabled
       name: argo-workflows
@@ -395,7 +423,7 @@ entries:
     version: 0.3.3
   - apiVersion: v2
     appVersion: 0.3.2
-    created: "2026-10-03T15:47:04.651760102Z"
+    created: "2026-10-05T00:11:01.719793776Z"
     dependencies:
     - condition: argo-workflows.enabled
       name: argo-workflows
@@ -423,7 +451,7 @@ entries:
     version: 0.3.2
   - apiVersion: v2
     appVersion: 0.3.1
-    created: "2026-10-03T15:47:04.558081322Z"
+    created: "2026-10-05T00:11:01.623425109Z"
     dependencies:
     - condition: argo-workflows.enabled
       name: argo-workflows
@@ -451,7 +479,7 @@ entries:
     version: 0.3.1
   - apiVersion: v2
     appVersion: 0.2.0
-    created: "2026-10-03T15:47:04.54685191Z"
+    created: "2026-10-05T00:11:01.612897703Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 024590769d55911b66b5fc15a8ff4588c90cc28464f45033216eefc0f35b3f8c
@@ -474,7 +502,7 @@ entries:
     version: 0.2.0
   - apiVersion: v2
     appVersion: 0.1.131
-    created: "2026-10-03T15:47:04.144794779Z"
+    created: "2026-10-05T00:11:01.218231376Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 55d1ca64574ba16333e0a81cbcdbb861371d9c4e72b80d72c08f76ac98d59ad2
@@ -497,7 +525,7 @@ entries:
     version: 0.1.131
   - apiVersion: v2
     appVersion: 0.1.130
-    created: "2026-10-03T15:47:04.13832868Z"
+    created: "2026-10-05T00:11:01.209053222Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 5599cdcd79d04c5eeb5d4b4aa88b26d0620c3017629a081584346dc29cc362fb
@@ -520,7 +548,7 @@ entries:
     version: 0.1.130
   - apiVersion: v2
     appVersion: 0.1.129
-    created: "2026-10-03T15:47:04.127400497Z"
+    created: "2026-10-05T00:11:01.199906598Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 2d6b97fad0983bf8d6ada8c6ff69b4d0afbfa1c7b0dc9c02eee95c07c3b77390
@@ -543,7 +571,7 @@ entries:
     version: 0.1.129
   - apiVersion: v2
     appVersion: 0.1.128
-    created: "2026-10-03T15:47:04.12100943Z"
+    created: "2026-10-05T00:11:01.193486032Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 424769edc1f510441d99627289f2064b992d1ce0cc6e2b5d000cf8dac3f2fbe1
@@ -566,7 +594,7 @@ entries:
     version: 0.1.128
   - apiVersion: v2
     appVersion: 0.1.127
-    created: "2026-10-03T15:47:04.115602476Z"
+    created: "2026-10-05T00:11:01.188427165Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 78f4106261f5c76d3a2e0daf827e834b56f8d0c9a62d54b0fc76ead2ee859b2d
@@ -589,7 +617,7 @@ entries:
     version: 0.1.127
   - apiVersion: v2
     appVersion: 0.1.126
-    created: "2026-10-03T15:47:04.110620824Z"
+    created: "2026-10-05T00:11:01.183566874Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 029e1b22f75b2b3e5fdda276084ececb9eddd3a1a8b784898b85c27bfc11f14d
@@ -612,7 +640,7 @@ entries:
     version: 0.1.126
   - apiVersion: v2
     appVersion: 0.1.125
-    created: "2026-10-03T15:47:04.105865801Z"
+    created: "2026-10-05T00:11:01.178322041Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: e1f5e7bcfa2dfe7a418664e9b1a7355ae8b7685fdb7163fad3d3f5eaaca1fbe3
@@ -635,7 +663,7 @@ entries:
     version: 0.1.125
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.099290411Z"
+    created: "2026-10-05T00:11:01.171960767Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 695193f0f4c934f9db4e223a869921e55f188ea45079d88062333a275cf03560
@@ -658,7 +686,7 @@ entries:
     version: 0.1.124
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.095369151Z"
+    created: "2026-10-05T00:11:01.167168388Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: c57ba9c405f29d7883cd0835935c2055baf34182249da8598242cbf3491d61c5
@@ -681,7 +709,7 @@ entries:
     version: 0.1.123
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.090211302Z"
+    created: "2026-10-05T00:11:01.163095244Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 80c95831094e16bc40cd630e8570e9cfcefa21911d7168371579535a9c08f655
@@ -704,7 +732,7 @@ entries:
     version: 0.1.122
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.085239085Z"
+    created: "2026-10-05T00:11:01.157770324Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 8b2016e81c65235f57085f655804394dca95f00798d3aa34662c54ddc34f94e4
@@ -727,7 +755,7 @@ entries:
     version: 0.1.121
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.08118594Z"
+    created: "2026-10-05T00:11:01.152970626Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 3d9173f5637fc7867987d5b4ddb86050b15a9b8c7e7bbe18406ba5da53b8cd8c
@@ -750,7 +778,7 @@ entries:
     version: 0.1.120
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.0717527Z"
+    created: "2026-10-05T00:11:01.144204839Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 78653f2f9d8225b399022cdb9712a289d3eb8d4393cf02c8c434fc2365876d61
@@ -773,7 +801,7 @@ entries:
     version: 0.1.119
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.067266318Z"
+    created: "2026-10-05T00:11:01.138705294Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: d029da4ccfd68419cf7d18081a7fd7294e095408228c1f0f22e470fee79cea93
@@ -796,7 +824,7 @@ entries:
     version: 0.1.118
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.061485019Z"
+    created: "2026-10-05T00:11:01.134623474Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 3b5632a1d89f1e7893cb4c07e7425baae8768f2c32504c5cfd18f49baced69fb
@@ -819,7 +847,7 @@ entries:
     version: 0.1.117
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.056351863Z"
+    created: "2026-10-05T00:11:01.128834073Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: ce47099e33a580ed9f2238be82eff11c88d508a6fa5b55fab8c6269b1f0efcba
@@ -842,7 +870,7 @@ entries:
     version: 0.1.116
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.049923147Z"
+    created: "2026-10-05T00:11:01.123698128Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 31aa6f0966f36a004eff5bd841ea5b694188233795c185d83399aaa3310a40a6
@@ -865,7 +893,7 @@ entries:
     version: 0.1.115
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.041269478Z"
+    created: "2026-10-05T00:11:01.118825662Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: c27ee725f863cf875b6925ec0467b6293bb081b9315572172ac8048d82123ff2
@@ -888,7 +916,7 @@ entries:
     version: 0.1.114
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.034246695Z"
+    created: "2026-10-05T00:11:01.114681174Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 011bc019fccc2d90e58b417fdbb6d35da39ae26f666c7079a7d3601d38672328
@@ -911,7 +939,7 @@ entries:
     version: 0.1.113
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.029996033Z"
+    created: "2026-10-05T00:11:01.109321869Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 20cec497c8cd45ad5523925170a221333823a941b4b889cbf29484257784db75
@@ -934,7 +962,7 @@ entries:
     version: 0.1.112
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.024597373Z"
+    created: "2026-10-05T00:11:01.103546618Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 4972b359a8eb5ec884155c165a3367d8eb1eafa1d618a86d48da3d7e3334f31c
@@ -957,7 +985,7 @@ entries:
     version: 0.1.111
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.019412642Z"
+    created: "2026-10-05T00:11:01.099431095Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: c79a8d5a802bed4a70505e4f8a511579747642896ee6a08fe13cfb115e724c29
@@ -980,7 +1008,7 @@ entries:
     version: 0.1.110
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.011067087Z"
+    created: "2026-10-05T00:11:01.089901782Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 8921c1c08b0293a61156856ac5bb1a842f81da1cad08397538e5cecdb51c68d6
@@ -1003,7 +1031,7 @@ entries:
     version: 0.1.109
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.00621228Z"
+    created: "2026-10-05T00:11:01.085787592Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 4dc800aff7d9a24a1f35d0dcbda7bdb6928e60f20beeb71454b4c083392ca373
@@ -1026,7 +1054,7 @@ entries:
     version: 0.1.108
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.001894452Z"
+    created: "2026-10-05T00:11:01.080627749Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 3a6c02c212e12827ee5cd565c007306c3a955da75667bc24767a7a8ac65325fd
@@ -1049,7 +1077,7 @@ entries:
     version: 0.1.107
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:03.996568268Z"
+    created: "2026-10-05T00:11:01.075505499Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 8a43ad912840ef7c1bf8459b1a1d866f72abae7c05edc6b4340f1f2a33c28808
@@ -1072,7 +1100,7 @@ entries:
     version: 0.1.106
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:03.991660449Z"
+    created: "2026-10-05T00:11:01.071388223Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 1db924a1629843f4ca61c7b35724e6ae618c0524f51ade004482dfe3626c14da
@@ -1095,7 +1123,7 @@ entries:
     version: 0.1.105
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:03.986432338Z"
+    created: "2026-10-05T00:11:01.065618431Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: e0f6ee37cbd46a0c7c7453bc386cdf6bf473260aa990f856d3404badc8503bad
@@ -1118,7 +1146,7 @@ entries:
     version: 0.1.104
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:03.982397768Z"
+    created: "2026-10-05T00:11:01.06019819Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 6e9a89e1b74bcf2dcfc91b98e8cd68b13f431a1a1321bbc197deed5c9e09a0b8
@@ -1141,7 +1169,7 @@ entries:
     version: 0.1.103
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:03.977408921Z"
+    created: "2026-10-05T00:11:01.055208016Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: fd9da7876a16a0243d3ebbf5e1f083c43de63dbc5d1e2e53261cc87edcbb5f2d
@@ -1164,7 +1192,7 @@ entries:
     version: 0.1.102
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.540359595Z"
+    created: "2026-10-05T00:11:01.605574532Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 97f9cd736f63a160d24e34149b4b57736eaf727861dc666f721be8d374a47686
@@ -1187,7 +1215,7 @@ entries:
     version: 0.1.99
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.536262709Z"
+    created: "2026-10-05T00:11:01.600292434Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: b3850446a6fffffbb655c194d6e09f577b5ed8d7aaa7fadf80e0f05d72de35ca
@@ -1210,7 +1238,7 @@ entries:
     version: 0.1.98
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.530937623Z"
+    created: "2026-10-05T00:11:01.595161505Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: a48fad3e6a632701181210916831f4faf5abde77edd5c288f4407e41b7d019a7
@@ -1233,7 +1261,7 @@ entries:
     version: 0.1.97
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.526012636Z"
+    created: "2026-10-05T00:11:01.590966103Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 9faee61ab0fb4fc7d646813d20c6d7d9ac91b895bbbbff770f85b34d1328715a
@@ -1256,7 +1284,7 @@ entries:
     version: 0.1.96
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.521907304Z"
+    created: "2026-10-05T00:11:01.5854593Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 84bc7176d7fca481274d4e8a96edb4914d0311b00b6002f41b577e677dc77c99
@@ -1279,7 +1307,7 @@ entries:
     version: 0.1.95
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.51609776Z"
+    created: "2026-10-05T00:11:01.580620346Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 1d2a19794f9048b4cbfc657ddfd8472fa8969cd7885aa822adcc62a9524f2b97
@@ -1302,7 +1330,7 @@ entries:
     version: 0.1.94
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.510110805Z"
+    created: "2026-10-05T00:11:01.57668549Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: de031635b97dc720f883f37843e2cac7eaba981b60f9703f12185a4735a7874f
@@ -1325,7 +1353,7 @@ entries:
     version: 0.1.93
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.496882713Z"
+    created: "2026-10-05T00:11:01.568423366Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 342f5310de4431414c848e977731a2e6a0862bf9c40996714c9126d9f2427bfb
@@ -1348,7 +1376,7 @@ entries:
     version: 0.1.89
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.491476638Z"
+    created: "2026-10-05T00:11:01.562900297Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 681478d9fdd012068d8ebaf89d06bd9eb8e52230f09850d076e1160b8a77da45
@@ -1371,7 +1399,7 @@ entries:
     version: 0.1.88
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.487264707Z"
+    created: "2026-10-05T00:11:01.557971484Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: a605b8928b9dc57d08ad578a19bd4b7ac6dc908ead3ef49e760cfde31b981dd2
@@ -1394,7 +1422,7 @@ entries:
     version: 0.1.87
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.482029052Z"
+    created: "2026-10-05T00:11:01.553882751Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: aa804e7ce188cfdc8d4a114d98daa81759987efafe1457529e884f737b589f85
@@ -1417,7 +1445,7 @@ entries:
     version: 0.1.86
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.477196065Z"
+    created: "2026-10-05T00:11:01.548481297Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 2249defb7925ffb59f858b1e157313b28e7e63b8e7ac0dde6f1e3a01af07f857
@@ -1440,7 +1468,7 @@ entries:
     version: 0.1.84
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.473130377Z"
+    created: "2026-10-05T00:11:01.543225297Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: eafb1cc94c4795e7b2eaa74c1e8ad7c3efe2c6bec761ded49d06077151950b04
@@ -1463,7 +1491,7 @@ entries:
     version: 0.1.83
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.467933024Z"
+    created: "2026-10-05T00:11:01.539127808Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: c61a65b26152950d4da9565170018f133c9788a8d469cf26d5f0f5a8ac6f5792
@@ -1486,7 +1514,7 @@ entries:
     version: 0.1.82
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.462881709Z"
+    created: "2026-10-05T00:11:01.533782469Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 9e882ac1ecfcd4135db0a18327d08f549ab60cf6f58a58042d196bd3748041e9
@@ -1509,7 +1537,7 @@ entries:
     version: 0.1.81
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.458836719Z"
+    created: "2026-10-05T00:11:01.528637584Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 35ab9f829790b6ecc77cc95e95d67933e3feb65b51d37d110eaf93ef07c065c0
@@ -1532,7 +1560,7 @@ entries:
     version: 0.1.80
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.448472729Z"
+    created: "2026-10-05T00:11:01.519880503Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: ba1a37170e7e1f775fa0779ff3d0b2f85862b3dda6625e9c1737760195a7903e
@@ -1555,7 +1583,7 @@ entries:
     version: 0.1.79
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.44443314Z"
+    created: "2026-10-05T00:11:01.514716565Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: f502c1a0ab741795fb262fadb5a84678cd7f1d2c74da4aa709a961a3ac8730f9
@@ -1578,7 +1606,7 @@ entries:
     version: 0.1.78
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.439302878Z"
+    created: "2026-10-05T00:11:01.509877249Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 2f8cf68e1d0379698512418b2d338ee51a56ce057eec8fed2bea00e28e00cb65
@@ -1601,7 +1629,7 @@ entries:
     version: 0.1.77
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.434060431Z"
+    created: "2026-10-05T00:11:01.505664754Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 8f0f3feaa025d14d405b2fa23c1a337c48d3408081801c5fd017f07446b32ceb
@@ -1624,7 +1652,7 @@ entries:
     version: 0.1.76
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.430119385Z"
+    created: "2026-10-05T00:11:01.500519421Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: afcb923fc116d006b17c57c0dcd98a96205e05ecb4e11660595053e963d43cb0
@@ -1647,7 +1675,7 @@ entries:
     version: 0.1.75
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.425046489Z"
+    created: "2026-10-05T00:11:01.495559912Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 64bd42b8773c5fa5fb5e6d9ae2a12b12c3a7870feaa2389eba2c14a3cc0a26bb
@@ -1670,7 +1698,7 @@ entries:
     version: 0.1.74
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.420266865Z"
+    created: "2026-10-05T00:11:01.491582447Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: a78d21b66f0f924597fd0067cb74de62a19f38b34b6ccaaf237cd14f5fe52e95
@@ -1693,7 +1721,7 @@ entries:
     version: 0.1.73
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.416259976Z"
+    created: "2026-10-05T00:11:01.486515728Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: ac08f39ba98d0a53f64e35b5d74be5cccebe924f0b1e33835449cb1b97ce370d
@@ -1716,7 +1744,7 @@ entries:
     version: 0.1.72
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.410963173Z"
+    created: "2026-10-05T00:11:01.481736606Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 29043782aac8d63ea2631931679df38c44b03a5a7ac8d587acd912cad6fe2a46
@@ -1739,7 +1767,7 @@ entries:
     version: 0.1.71
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.406235152Z"
+    created: "2026-10-05T00:11:01.477643625Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: a9e1093c5d2f5f1cadd63d338a97ae239f5d4bd777530c9fd428c954758838fc
@@ -1762,7 +1790,7 @@ entries:
     version: 0.1.70
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.397816762Z"
+    created: "2026-10-05T00:11:01.467677648Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 67b0b180e5a6191138fd87b3d8c2c2d168a1d291dd3f9f4fb523ad69584bc64a
@@ -1785,7 +1813,7 @@ entries:
     version: 0.1.69
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.393038449Z"
+    created: "2026-10-05T00:11:01.463560263Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 844c215adf122b49ef6dcdbfdcd072274ded741200d7ccd9e931a937a03446d2
@@ -1808,7 +1836,7 @@ entries:
     version: 0.1.68
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.3891225Z"
+    created: "2026-10-05T00:11:01.457892621Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 532a08fe11054fbaa023eb0d7159ed8dd3ff2baa659842b93245b9f8e85c3bfc
@@ -1831,7 +1859,7 @@ entries:
     version: 0.1.67
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.383521682Z"
+    created: "2026-10-05T00:11:01.452560779Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 4a3f539657fbbfddc496652ba5c9902f34488034452468bf2cfe05122f3b4c1b
@@ -1854,7 +1882,7 @@ entries:
     version: 0.1.66
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.378478206Z"
+    created: "2026-10-05T00:11:01.448664755Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: f1af81cc590a1af538ce501ad57b1bfd60e226d878d1ea9b912877e589121b18
@@ -1877,7 +1905,7 @@ entries:
     version: 0.1.65
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.374506893Z"
+    created: "2026-10-05T00:11:01.443524828Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: e6278d0254f8eab560ba4c84685e5ac393fdf3c60e2615a5d5aaa4181174ff19
@@ -1900,7 +1928,7 @@ entries:
     version: 0.1.64
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.369520972Z"
+    created: "2026-10-05T00:11:01.439045417Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 51f109788a91ff5b6ec590a5c33010c0e49169c8829d90d6df85ef3fd4f15768
@@ -1923,7 +1951,7 @@ entries:
     version: 0.1.63
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.364905428Z"
+    created: "2026-10-05T00:11:01.43545259Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 46b975a7fdcbcbde64daaffc0be18f9d1dfd39b00a146777fb4ae958e056dcdc
@@ -1946,7 +1974,7 @@ entries:
     version: 0.1.62
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.361184882Z"
+    created: "2026-10-05T00:11:01.430536112Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 50c0ee5232c7f4ab84de6ce59955c299ba72890701a214a59eb301e0da32b90a
@@ -1969,7 +1997,7 @@ entries:
     version: 0.1.61
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.356120116Z"
+    created: "2026-10-05T00:11:01.426681907Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 0a3cff296cd9e37c112950d6439ce6fe208aa5ed51abc030459bd2a66ee358b9
@@ -1992,7 +2020,7 @@ entries:
     version: 0.1.60
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.347886017Z"
+    created: "2026-10-05T00:11:01.418555303Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 347dd6908ca3c066d95b4f363121bf9d2d57e650d7d40f33e23f560a80aa86b2
@@ -2015,7 +2043,7 @@ entries:
     version: 0.1.59
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.343155561Z"
+    created: "2026-10-05T00:11:01.414904838Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 9f82ab05de322ecfd9424dcba98dcbdb1549dac42fc80cb615e804066d40878b
@@ -2038,7 +2066,7 @@ entries:
     version: 0.1.58
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.339360687Z"
+    created: "2026-10-05T00:11:01.410122721Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 127886259c2cd4840fc4a1dca4d732317a9cc510b3270b68819f6d2485d46342
@@ -2061,7 +2089,7 @@ entries:
     version: 0.1.57
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.334478591Z"
+    created: "2026-10-05T00:11:01.405391238Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: a5d4001fb2eaffdedacf2084aa5e553c8e39e35861b69f3e307f097f7e15ca03
@@ -2084,7 +2112,7 @@ entries:
     version: 0.1.56
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.328998127Z"
+    created: "2026-10-05T00:11:01.401679738Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: eb07b399fc87878ac53045a1504ea699eb44fe1d7c6b1a4b9ad8007419bb6a66
@@ -2107,7 +2135,7 @@ entries:
     version: 0.1.55
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.325281489Z"
+    created: "2026-10-05T00:11:01.396688563Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 3ce745608da814ead522c54492c09b0c1e7d5a3abb6f2a14559a7c88bd6ddf66
@@ -2130,7 +2158,7 @@ entries:
     version: 0.1.54
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.320476837Z"
+    created: "2026-10-05T00:11:01.392039724Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: e8698d38042af567204c1857b319c63cf836871c82fda6354f1aa09a469b3007
@@ -2153,7 +2181,7 @@ entries:
     version: 0.1.53
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.31598207Z"
+    created: "2026-10-05T00:11:01.388537666Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 1bf5c143e258155e87aaed484c224af58cc79fa77c3e2076601b8c3f2595ef3d
@@ -2176,7 +2204,7 @@ entries:
     version: 0.1.52
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.312337726Z"
+    created: "2026-10-05T00:11:01.383721523Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: c8ab0685cedb3c2b5a3acfa753e585d8747f8bb24833139087bbc63156c2a888
@@ -2199,7 +2227,7 @@ entries:
     version: 0.1.51
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.307636936Z"
+    created: "2026-10-05T00:11:01.378743971Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: c043acbbb37c5b4fe252756bf1d95cb7f1617f2ab8d3ffa9df6de081e50d24e9
@@ -2222,7 +2250,7 @@ entries:
     version: 0.1.50
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.299685975Z"
+    created: "2026-10-05T00:11:01.370089036Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 6e0267a5e9d67937bc8993d75362f4b0db928463aee8f5344f9684fa3cee86bd
@@ -2245,7 +2273,7 @@ entries:
     version: 0.1.49
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.29513313Z"
+    created: "2026-10-05T00:11:01.365389632Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: d7874cd18f0959ef398101a9c5f7745f618fc40ce0eeced60dfbd82b0fd113da
@@ -2268,7 +2296,7 @@ entries:
     version: 0.1.48
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.291241065Z"
+    created: "2026-10-05T00:11:01.361672192Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: babc8fb9a08893ebd178b8420f37ab8d7ed01130d5187f7b05b57c7f9cffd31c
@@ -2291,7 +2319,7 @@ entries:
     version: 0.1.47
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.286291903Z"
+    created: "2026-10-05T00:11:01.356136586Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: fe18a940f9ec3b1d60ef34f4cbf5359d596ebbda469a5db61f9cfa34e29c98e5
@@ -2314,7 +2342,7 @@ entries:
     version: 0.1.46
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.281702289Z"
+    created: "2026-10-05T00:11:01.351235987Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 1ac4ab333eaa7bd88c3e7bfb5a72584d7299deacd1c4e74190b85fc2ff5d04fd
@@ -2337,7 +2365,7 @@ entries:
     version: 0.1.45
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.277921351Z"
+    created: "2026-10-05T00:11:01.347584581Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 86479e296aff97367e5c9935a89ccdb702c4ad1c098a8175068a2d23211c5da5
@@ -2360,7 +2388,7 @@ entries:
     version: 0.1.44
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.273009608Z"
+    created: "2026-10-05T00:11:01.342937537Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 640ec3f2a8e9d6fea4fbdae5124c669f4e5c832d502286cb31bcd989924a85b3
@@ -2383,7 +2411,7 @@ entries:
     version: 0.1.43
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.268468745Z"
+    created: "2026-10-05T00:11:01.339229726Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 2f2ca5d9793cb8bebfe94188ecaf2e13cb3f5d6e48a8c5566ff49f111dcbd83d
@@ -2406,7 +2434,7 @@ entries:
     version: 0.1.42
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.26476987Z"
+    created: "2026-10-05T00:11:01.334221927Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 8b052e0b48ae8c3090fe47b4d798aabd0a27b72daec953d5f285037085e3a950
@@ -2429,7 +2457,7 @@ entries:
     version: 0.1.41
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.259665087Z"
+    created: "2026-10-05T00:11:01.329462622Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 9727062b136e27e31d855a7d433151732042f0d6ff73221540facba1921939c8
@@ -2452,7 +2480,7 @@ entries:
     version: 0.1.40
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.251471585Z"
+    created: "2026-10-05T00:11:01.321257171Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 6d2e67901f8480e2870c0d70a47e391538602b2a0b4c0f0777906203889170ae
@@ -2475,7 +2503,7 @@ entries:
     version: 0.1.39
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.246159515Z"
+    created: "2026-10-05T00:11:01.316634604Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 51cc43e25ef4e4a3ef1f99f6f34cf5e94340f22004cf4febce799ffb77fce38b
@@ -2498,7 +2526,7 @@ entries:
     version: 0.1.38
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.241091501Z"
+    created: "2026-10-05T00:11:01.312799935Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: cade6b31051b31cd82ee127e6b167896209895f88962a709a6991861939eb75a
@@ -2521,7 +2549,7 @@ entries:
     version: 0.1.37
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.237403736Z"
+    created: "2026-10-05T00:11:01.307490062Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: f7b53a7746fdd689d765414e014205daa9193b9c27ee956fee438d3daecda7b4
@@ -2544,7 +2572,7 @@ entries:
     version: 0.1.36
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.232464502Z"
+    created: "2026-10-05T00:11:01.302910723Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: b4bd03943bde35861bad8c25a2eb6e80a3c0e0a04442e12230e63b7d4408234b
@@ -2567,7 +2595,7 @@ entries:
     version: 0.1.35
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.227983039Z"
+    created: "2026-10-05T00:11:01.299089249Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 531902864fb47f84ffd5fbde2cedd942fddc6f12d6f257c27cece48d85d29b24
@@ -2590,7 +2618,7 @@ entries:
     version: 0.1.34
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.223998442Z"
+    created: "2026-10-05T00:11:01.293677135Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 77b8b98c351282817401197be9c5e35548cf6f53743cf37b2cab74f9dbe85efb
@@ -2613,7 +2641,7 @@ entries:
     version: 0.1.33
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.218915741Z"
+    created: "2026-10-05T00:11:01.289108937Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: c9a50e6a8c88e9ac2cab0245fe8e357a87361b428c674907de7667c727328895
@@ -2636,7 +2664,7 @@ entries:
     version: 0.1.32
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.214475115Z"
+    created: "2026-10-05T00:11:01.285463511Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 2a3184046cd6e94a5fdadaeec59b3c570149e92cf5b6a3dc870b44256b9153eb
@@ -2659,7 +2687,7 @@ entries:
     version: 0.1.31
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.210723491Z"
+    created: "2026-10-05T00:11:01.280292197Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 94f9918727f7655400fb17ffee66b1e425f1f2e6a52cead2f146257c3bf86771
@@ -2682,7 +2710,7 @@ entries:
     version: 0.1.30
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.203565447Z"
+    created: "2026-10-05T00:11:01.272571594Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 6cfc7205d5aa589947612a5aba38ac2ec2fa594bfb63a0afe3ce74eaad4d7f64
@@ -2705,7 +2733,7 @@ entries:
     version: 0.1.29
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.199421725Z"
+    created: "2026-10-05T00:11:01.268536679Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: a7875dd255790a8d22748ea2201c09dfa731bdf5231c4def9e44ded14d39bacb
@@ -2728,7 +2756,7 @@ entries:
     version: 0.1.28
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.196194989Z"
+    created: "2026-10-05T00:11:01.265379365Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: cb65d34c813d476485f5fec91575daaf0b6bc4d6bb6fc9b4df5be41f34f550f1
@@ -2751,7 +2779,7 @@ entries:
     version: 0.1.27
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.192086892Z"
+    created: "2026-10-05T00:11:01.260502843Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: cd5a481c33d357c52d8bd2235b64f260ce1c8823f9653138c0be34e6d8f7b677
@@ -2774,7 +2802,7 @@ entries:
     version: 0.1.26
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.188759428Z"
+    created: "2026-10-05T00:11:01.256516612Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: e7b6b4a70f3db3cb2d4be33649b30e25664bcd20febb15cdc64a6c91601161c0
@@ -2797,7 +2825,7 @@ entries:
     version: 0.1.25
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.184327386Z"
+    created: "2026-10-05T00:11:01.252825799Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 3613795cb185234688d57a1ddfb3c7fa4c8a755411249e83884fb07602bb327f
@@ -2820,7 +2848,7 @@ entries:
     version: 0.1.24
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.181136275Z"
+    created: "2026-10-05T00:11:01.248932463Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 8859e057fa811333061c83e9a04c8b705fb64246c37718b4baf39a385e79becc
@@ -2843,7 +2871,7 @@ entries:
     version: 0.1.23
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.176759911Z"
+    created: "2026-10-05T00:11:01.24570654Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 4a8cd14e7263bb94a7f89e2b751b4c7b52220efc6ff2cb3cc063a5eb324a57ed
@@ -2866,7 +2894,7 @@ entries:
     version: 0.1.22
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.17355225Z"
+    created: "2026-10-05T00:11:01.241577733Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 0f0efe83719db2f7fb9c19159b327d5e2182abcd1aafc591abf5fd9c45968562
@@ -2889,7 +2917,7 @@ entries:
     version: 0.1.21
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.169042265Z"
+    created: "2026-10-05T00:11:01.238399479Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 472ffa5af0ec357c666ef25039094214fdf974b37bf7fcbd5c8805dcb478b836
@@ -2912,7 +2940,7 @@ entries:
     version: 0.1.20
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.156454373Z"
+    created: "2026-10-05T00:11:01.231046292Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 749a57453fe471f84be8e7766e199eccc101bda964b2fb145e8112632ed91989
@@ -2935,7 +2963,7 @@ entries:
     version: 0.1.19
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.153068961Z"
+    created: "2026-10-05T00:11:01.226892656Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 1a14d4ca7d46546688ea618ddd9c3e7dcf6bc3ebec62b332a789f0a953e2c1ed
@@ -2958,7 +2986,7 @@ entries:
     version: 0.1.15
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.148469587Z"
+    created: "2026-10-05T00:11:01.223265184Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: dafe04aa3b07f33a067f742f34bbc25dededa7d83b6b07421d57b29e95d4f3b4
@@ -2981,7 +3009,7 @@ entries:
     version: 0.1.14
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.132040665Z"
+    created: "2026-10-05T00:11:01.203112674Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 292a66c40be8a49c1869963ef1f0471e45dc2f00b5be2562c13764858665e9cc
@@ -3004,7 +3032,7 @@ entries:
     version: 0.1.13
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.075668061Z"
+    created: "2026-10-05T00:11:01.14876791Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 6c6bad064db93370141e0605750242ea4c5e7d47c956b63d74f935e1150c3e24
@@ -3027,7 +3055,7 @@ entries:
     version: 0.1.12
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.015386127Z"
+    created: "2026-10-05T00:11:01.093948519Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 242afce046b1cfc9e891691fdfe4938166082c32a3a220b51f25a447e6a2c79d
@@ -3050,7 +3078,7 @@ entries:
     version: 0.1.11
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:03.972602516Z"
+    created: "2026-10-05T00:11:01.051069611Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 92adaa761f8cdaff504088eef2ce514579d5c766620bf7ef35e498206fcf21fb
@@ -3073,7 +3101,7 @@ entries:
     version: 0.1.10
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.50246379Z"
+    created: "2026-10-05T00:11:01.571638127Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: c6ad44b05b294db767baee201ccf315c01b27e85f89beb8e5996b4dcf61e9033
@@ -3096,7 +3124,7 @@ entries:
     version: 0.1.9
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.453144896Z"
+    created: "2026-10-05T00:11:01.52467138Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 19c656cd2f9853b3553ed88a8fa7a394ccaaeb84c76503a6e1d8d549d77ef1ec
@@ -3119,7 +3147,7 @@ entries:
     version: 0.1.8
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.40221545Z"
+    created: "2026-10-05T00:11:01.47196821Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: a387ded38680e2fd4c39a925492fc973ba9e84e9223de6a1e50c56c925f52c95
@@ -3142,7 +3170,7 @@ entries:
     version: 0.1.7
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.351709025Z"
+    created: "2026-10-05T00:11:01.422393358Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 27e4122478877ac431ca450149f673a93ad62007682b48feb5bbb26cdc69a6e0
@@ -3165,7 +3193,7 @@ entries:
     version: 0.1.6
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.303429812Z"
+    created: "2026-10-05T00:11:01.374874226Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: b49cf2f2e4a648e80a7e2748c676379ab9a6a657d06d944aecefee23533d4021
@@ -3188,7 +3216,7 @@ entries:
     version: 0.1.5
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.254763022Z"
+    created: "2026-10-05T00:11:01.325589008Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 771e45433909e44a1a71ea35f9c2e3ee8deeeb36d5b04ce5f807753963a5a16d
@@ -3211,7 +3239,7 @@ entries:
     version: 0.1.4
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.206730779Z"
+    created: "2026-10-05T00:11:01.276645837Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 87399cd257480b37eb44a22fc3c8af6ac0e8fc98c485651dbc1ecbd2b3e76aee
@@ -3234,7 +3262,7 @@ entries:
     version: 0.1.3
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:04.164069999Z"
+    created: "2026-10-05T00:11:01.234112747Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 09616ec727e0ebf11237dc647c3c25bfa8bdf4d4eafd9e1fbb569e132a69500b
@@ -3257,7 +3285,7 @@ entries:
     version: 0.1.2
   - apiVersion: v2
     appVersion: latest
-    created: "2026-10-03T15:47:03.969175026Z"
+    created: "2026-10-05T00:11:01.046489127Z"
     description: A Kubernetes operator for managing language models, tools, agents,
       personas, and clients
     digest: 7c82b5e1d5414bfacc0be218e079dbc368d0d6341823304e9d8780f5c68f5f50
@@ -3280,8 +3308,63 @@ entries:
     version: 0.1.0
   language-operator-runtimes:
   - apiVersion: v2
+    appVersion: 0.3.17
+    created: "2026-10-05T00:11:01.812977494Z"
+    dependencies:
+    - condition: claude-code.enabled
+      name: claude-code
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.10
+    - condition: openclaw.enabled
+      name: openclaw
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.3
+    - condition: opencode.enabled
+      name: opencode
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.7
+    - condition: deepagents.enabled
+      name: deepagents
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.5
+    - condition: kilo.enabled
+      name: kilo
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.0
+    - condition: qwen-code.enabled
+      name: qwen-code
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.1
+    - condition: cursor.enabled
+      name: cursor
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.1
+    - condition: goose.enabled
+      name: goose
+      repository: oci://ghcr.io/language-operator/charts
+      version: 0.1.1
+    description: Umbrella chart bundling the Language Operator runtimes (openclaw,
+      opencode, claude-code, deepagents, kilo, qwen-code, cursor, goose) as subcharts
+    digest: 9b4067710e8f64c94413edb16c7d12bb2f183096c4aaee358ba5dcb3a9b76505
+    home: https://github.com/language-operator/language-operator
+    keywords:
+    - ai
+    - llm
+    - language-models
+    - agents
+    maintainers:
+    - email: james@theryans.io
+      name: James Ryan
+    name: language-operator-runtimes
+    sources:
+    - https://github.com/language-operator/language-operator
+    type: application
+    urls:
+    - https://language-operator.github.io/language-operator/language-operator-runtimes-0.3.17.tgz
+    version: 0.3.17
+  - apiVersion: v2
     appVersion: 0.3.16
-    created: "2026-10-03T15:47:04.748883255Z"
+    created: "2026-10-05T00:11:01.811456886Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -3336,7 +3419,7 @@ entries:
     version: 0.3.16
   - apiVersion: v2
     appVersion: 0.3.15
-    created: "2026-10-03T15:47:04.746603604Z"
+    created: "2026-10-05T00:11:01.809838534Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -3391,7 +3474,7 @@ entries:
     version: 0.3.15
   - apiVersion: v2
     appVersion: 0.3.14
-    created: "2026-10-03T15:47:04.744338235Z"
+    created: "2026-10-05T00:11:01.808292969Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -3446,7 +3529,7 @@ entries:
     version: 0.3.14
   - apiVersion: v2
     appVersion: 0.3.13
-    created: "2026-10-03T15:47:04.7426542Z"
+    created: "2026-10-05T00:11:01.806687562Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -3485,7 +3568,7 @@ entries:
     version: 0.3.13
   - apiVersion: v2
     appVersion: 0.3.12
-    created: "2026-10-03T15:47:04.741665319Z"
+    created: "2026-10-05T00:11:01.803777151Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -3524,7 +3607,7 @@ entries:
     version: 0.3.12
   - apiVersion: v2
     appVersion: 0.3.11
-    created: "2026-10-03T15:47:04.740635432Z"
+    created: "2026-10-05T00:11:01.802843448Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -3563,7 +3646,7 @@ entries:
     version: 0.3.11
   - apiVersion: v2
     appVersion: 0.3.10
-    created: "2026-10-03T15:47:04.73970505Z"
+    created: "2026-10-05T00:11:01.801976419Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -3602,7 +3685,7 @@ entries:
     version: 0.3.10
   - apiVersion: v2
     appVersion: 0.3.9
-    created: "2026-10-03T15:47:04.757374844Z"
+    created: "2026-10-05T00:11:01.821945529Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -3641,7 +3724,7 @@ entries:
     version: 0.3.9
   - apiVersion: v2
     appVersion: 0.3.8
-    created: "2026-10-03T15:47:04.75630883Z"
+    created: "2026-10-05T00:11:01.820937467Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -3680,7 +3763,7 @@ entries:
     version: 0.3.8
   - apiVersion: v2
     appVersion: 0.3.7
-    created: "2026-10-03T15:47:04.75444594Z"
+    created: "2026-10-05T00:11:01.820005577Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -3719,7 +3802,7 @@ entries:
     version: 0.3.7
   - apiVersion: v2
     appVersion: 0.3.6
-    created: "2026-10-03T15:47:04.753576071Z"
+    created: "2026-10-05T00:11:01.819139701Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -3758,7 +3841,7 @@ entries:
     version: 0.3.6
   - apiVersion: v2
     appVersion: 0.3.5
-    created: "2026-10-03T15:47:04.752703647Z"
+    created: "2026-10-05T00:11:01.818280447Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -3797,7 +3880,7 @@ entries:
     version: 0.3.5
   - apiVersion: v2
     appVersion: 0.3.4
-    created: "2026-10-03T15:47:04.751797951Z"
+    created: "2026-10-05T00:11:01.817433105Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -3836,7 +3919,7 @@ entries:
     version: 0.3.4
   - apiVersion: v2
     appVersion: 0.3.3
-    created: "2026-10-03T15:47:04.750878539Z"
+    created: "2026-10-05T00:11:01.81653565Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -3875,7 +3958,7 @@ entries:
     version: 0.3.3
   - apiVersion: v2
     appVersion: 0.3.2
-    created: "2026-10-03T15:47:04.749866535Z"
+    created: "2026-10-05T00:11:01.815554759Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -3914,7 +3997,7 @@ entries:
     version: 0.3.2
   - apiVersion: v2
     appVersion: 0.3.1
-    created: "2026-10-03T15:47:04.738676936Z"
+    created: "2026-10-05T00:11:01.801100524Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -3953,7 +4036,7 @@ entries:
     version: 0.3.1
   - apiVersion: v2
     appVersion: 0.2.0
-    created: "2026-10-03T15:47:04.737826674Z"
+    created: "2026-10-05T00:11:01.800224489Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -3992,7 +4075,7 @@ entries:
     version: 0.2.0
   - apiVersion: v2
     appVersion: 0.1.132
-    created: "2026-10-03T15:47:04.73699736Z"
+    created: "2026-10-05T00:11:01.79935714Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -4031,7 +4114,7 @@ entries:
     version: 0.1.132
   - apiVersion: v2
     appVersion: 0.1.131
-    created: "2026-10-03T15:47:04.736126008Z"
+    created: "2026-10-05T00:11:01.79846804Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -4066,7 +4149,7 @@ entries:
     version: 0.1.131
   - apiVersion: v2
     appVersion: 0.1.130
-    created: "2026-10-03T15:47:04.735411327Z"
+    created: "2026-10-05T00:11:01.79768067Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -4101,7 +4184,7 @@ entries:
     version: 0.1.130
   - apiVersion: v2
     appVersion: 0.1.129
-    created: "2026-10-03T15:47:04.734648137Z"
+    created: "2026-10-05T00:11:01.79614324Z"
     dependencies:
     - condition: claude-code.enabled
       name: claude-code
@@ -4134,4 +4217,4 @@ entries:
     urls:
     - https://language-operator.github.io/language-operator/language-operator-runtimes-0.1.129.tgz
     version: 0.1.129
-generated: "2026-10-03T15:47:03.964175677Z"
+generated: "2026-10-05T00:11:01.042610707Z"
