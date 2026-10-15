@@ -8,6 +8,16 @@ This document tracks releases of the Language Operator project.
 
 ---
 
+## v0.3.18 — 2026-10-14
+
+**Behavior change:** the gateway now **refuses to start** when its master key is the old placeholder `sk-langop-proxy` or shorter than 32 characters. That covers `LITELLM_MASTER_KEY` and `general_settings.master_key` via `LANGOP_GATEWAY_EXTRA_CONFIG`. Agents use their own `MODEL_API_KEY` and need no master key. Agent keys now work only on model API routes; admin routes return 403. (#984, #986)
+
+**Bug Fixes**
+- refuse the placeholder sk-langop-proxy and short master keys (#984)
+- accept agent keys on model API routes only (#986)
+
+---
+
 ## v0.3.17 — 2026-10-04
 
 **Behavior change:** agents on GitHub and GitLab repositories no longer receive `GH_TOKEN` / `GITLAB_TOKEN` in their environment. The `repository` init container writes `gh`'s `hosts.yml` / `glab`'s `config.yml` into a memory-backed volume and the agent gets `GH_CONFIG_DIR` / `GLAB_CONFIG_DIR`, so `gh` and `glab` stay authenticated with no token in the process environment. Scripts that read `$GH_TOKEN` directly should read `/var/run/secrets/langop.io/git/token` instead. Forgejo/Gitea still export `GITEA_TOKEN` (`tea` has no config-directory setting). (#981)
