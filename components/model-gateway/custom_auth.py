@@ -6,7 +6,8 @@ A key is ``sk-langop-<agent-id>.<signature>`` where the signature is the
 first 32 hex characters of HMAC-SHA256(secret, agent-id). The gateway can
 verify it without a database or a key list, and the agent id lands on every
 request as the LiteLLM user id so spend callbacks can attribute usage to the
-agent. The proxy's own master key (LITELLM_MASTER_KEY) keeps working so
+agent. Agent keys are accepted on model API routes only; admin routes
+(model and key management, spend, config) get 403. The proxy's own master key (LITELLM_MASTER_KEY) keeps working so
 clients that do not carry an agent key are not locked out, unless it is the
 public placeholder sk-langop-proxy or shorter than 32 characters.
 
@@ -74,10 +75,30 @@ def _master_key_matches(api_key: Optional[str]) -> bool:
     return bool(api_key) and hmac.compare_digest(api_key, master)
 
 
+# Read-only model metadata that is not in LiteLLM's LLM route list but which
+# clients may call alongside /v1/models.
+AGENT_EXTRA_ROUTES = frozenset({"/model/info", "/v1/model/info"})
+
+
+def agent_route_allowed(route: Optional[str]) -> bool:
+    """Whether an agent key may call ``route``: model APIs only, never admin routes.
+
+    The list of model routes is LiteLLM's own (OpenAI, Anthropic, Google, MCP
+    inference), so new inference routes follow the LiteLLM pin.
+    """
+    if not route:
+        return False
+    if route in AGENT_EXTRA_ROUTES:
+        return True
+    from litellm.proxy.auth.route_checks import RouteChecks
+    return RouteChecks.is_llm_api_route(route)
+
+
 async def user_api_key_auth(request, api_key: str):
     """LiteLLM custom auth hook (``general_settings.custom_auth``)."""
     from fastapi import HTTPException, status
     from litellm.proxy._types import LitellmUserRoles, UserAPIKeyAuth
+    from litellm.proxy.auth.auth_utils import get_request_route
 
     secret = os.environ.get("LANGOP_GATEWAY_HMAC_SECRET", "")
     key = (api_key or "").removeprefix("Bearer ").strip()
@@ -91,6 +112,15 @@ async def user_api_key_auth(request, api_key: str):
         # exception is first checked as a possible database error, which imports
         # prisma (not installed here) and turns the rejection into a 500.
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid API key")
+
+    # get_request_route reads the ASGI scope path (root_path stripped), as
+    # LiteLLM's own auth does; request.url.path can be bent by the Host header.
+    route = get_request_route(request) if request is not None else None
+    if not agent_route_allowed(route):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"agent keys may only call model APIs, not {route}",
+        )
 
     return UserAPIKeyAuth(
         api_key=key,

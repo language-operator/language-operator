@@ -62,6 +62,7 @@ The gateway only serves requests carrying a valid key. Every agent gets its own:
 
 - The operator injects **`MODEL_API_KEY`** into each agent's containers, next to `MODEL_ENDPOINT`. Agents send it as the bearer key (`Authorization: Bearer $MODEL_API_KEY`); the bundled gateway-backed runtimes do this for you.
 - A key is `sk-langop-<agent UUID>.<signature>`, where the signature is an HMAC of the agent UUID under the cluster's secret. The gateway checks it without a key store, and records the agent UUID as the request's LiteLLM `user_id`, so usage can be attributed per agent.
+- An agent key works on model API routes only: chat completions, responses, embeddings, `/v1/messages`, the Gemini `/v1beta/models/...` routes, `/v1/models` and `/model/info` (LiteLLM's own list of LLM routes). Admin routes such as `/model/new`, `/key/*`, `/user/*`, `/team/*`, spend and config get **403**; they need the master key.
 - A request without a valid key gets **401**. Custom agent images must send `MODEL_API_KEY`; one that sends a fixed placeholder is rejected.
 
 The HMAC secret lives in the Secret `gateway-auth` (key `hmac-secret`) in the cluster's namespace. The operator generates it on first reconcile; create it yourself beforehand to choose the value. **Rotating** it (edit the value, or delete the Secret to have a new one generated) restarts the gateway and replaces every agent's key, and running agents are restarted with their new key.
