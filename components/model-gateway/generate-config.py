@@ -412,6 +412,47 @@ def apply_operator_settings(config: Dict[str, Any], env: Optional[Dict[str, str]
     return config
 
 
+def _load_custom_auth():
+    """custom_auth.py sits next to this script in the repo and in /app in the image."""
+    import importlib.util
+    for directory in (Path(__file__).resolve().parent, Path("/app")):
+        path = directory / "custom_auth.py"
+        if path.exists():
+            spec = importlib.util.spec_from_file_location("custom_auth", path)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            return module
+    raise ImportError("custom_auth.py not found next to generate-config.py or in /app")
+
+
+def check_master_key(config: Dict[str, Any], env: Optional[Dict[str, str]] = None) -> List[str]:
+    """Problems with the master keys the proxy would accept, one message each.
+
+    A master key comes from LITELLM_MASTER_KEY or from general_settings.master_key
+    (set through LANGOP_GATEWAY_EXTRA_CONFIG, possibly as an os.environ/ reference).
+    An unset or empty one is fine: per-agent keys still gate every route.
+    """
+    env = os.environ if env is None else env
+    problem_of = _load_custom_auth().master_key_problem
+
+    sources = [("LITELLM_MASTER_KEY", env.get("LITELLM_MASTER_KEY") or "")]
+    configured = (config.get("general_settings") or {}).get("master_key")
+    if configured:
+        configured = str(configured)
+        if configured.startswith("os.environ/"):
+            name = configured[len("os.environ/"):]
+            sources.append((f"general_settings.master_key (os.environ/{name})", env.get(name) or ""))
+        else:
+            sources.append(("general_settings.master_key", configured))
+
+    problems = []
+    for source, value in sources:
+        problem = value and problem_of(value)
+        if problem:
+            problems.append(f"{source}: {problem}")
+    return problems
+
+
 def generate_litellm_config(specs: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Generate complete LiteLLM config from one or more LanguageModel specs."""
     config: Dict[str, Any] = {}
@@ -444,6 +485,14 @@ def main():
 
     specs = load_model_specs()
     litellm_config = generate_litellm_config(specs)
+
+    problems = check_master_key(litellm_config)
+    if problems:
+        for problem in problems:
+            print(f"✗ Refusing to start: weak gateway master key, {problem}", file=sys.stderr)
+        print("  Agents authenticate with their own MODEL_API_KEY and need no master key. Remove it, or set "
+              "one of at least 32 random characters (e.g. `openssl rand -hex 32`) from a Secret.", file=sys.stderr)
+        sys.exit(1)
 
     output = yaml.dump(litellm_config, default_flow_style=False, sort_keys=False)
     print(output)

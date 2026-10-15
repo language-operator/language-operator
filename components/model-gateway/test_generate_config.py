@@ -178,6 +178,59 @@ class TestCustomAuth:
         assert custom_auth.verify("s3cret", forged) is None
 
 
+STRONG_KEY = "sk-" + "a1" * 20
+
+
+class TestMasterKey:
+    check = staticmethod(generate_config.check_master_key)
+
+    @pytest.mark.parametrize("value", ["sk-langop-proxy", "short", "x" * 31])
+    def test_placeholder_and_short_env_keys_are_refused(self, value):
+        problems = self.check({}, {"LITELLM_MASTER_KEY": value})
+        assert len(problems) == 1
+        assert problems[0].startswith("LITELLM_MASTER_KEY: ")
+
+    def test_message_never_echoes_a_short_key_that_may_be_real(self):
+        problems = self.check({}, {"LITELLM_MASTER_KEY": "hunter2"})
+        assert "hunter2" not in problems[0]
+        assert "public placeholder" in self.check({}, {"LITELLM_MASTER_KEY": "sk-langop-proxy"})[0]
+
+    def test_strong_unset_and_empty_keys_pass(self):
+        assert self.check({}, {"LITELLM_MASTER_KEY": STRONG_KEY}) == []
+        assert self.check({}, {}) == []
+        assert self.check({}, {"LITELLM_MASTER_KEY": ""}) == []
+
+    def test_master_key_from_extra_config_is_checked(self):
+        config = generate_config.apply_operator_settings(
+            {"general_settings": {}},
+            {"LANGOP_GATEWAY_EXTRA_CONFIG": "general_settings:\n  master_key: sk-langop-proxy\n"},
+        )
+        assert self.check(config, {}) == ["general_settings.master_key: 'sk-langop-proxy' is a public placeholder, not a credential"]
+
+    def test_os_environ_reference_is_resolved(self):
+        config = {"general_settings": {"master_key": "os.environ/MY_KEY"}}
+        assert self.check(config, {"MY_KEY": "sk-langop-proxy"})[0].startswith("general_settings.master_key (os.environ/MY_KEY): ")
+        assert self.check(config, {"MY_KEY": STRONG_KEY}) == []
+
+    def test_main_exits_non_zero_on_the_placeholder(self, monkeypatch, tmp_path, capsys):
+        monkeypatch.setattr(generate_config, "load_model_specs", lambda: [])
+        monkeypatch.delenv("LANGOP_GATEWAY_EXTRA_CONFIG", raising=False)
+        monkeypatch.delenv("LANGOP_GATEWAY_HMAC_SECRET", raising=False)
+        monkeypatch.setenv("LITELLM_MASTER_KEY", "sk-langop-proxy")
+        with pytest.raises(SystemExit) as exc:
+            generate_config.main()
+        assert exc.value.code == 1
+        err = capsys.readouterr().err
+        assert "Refusing to start" in err and "MODEL_API_KEY" in err
+
+    def test_auth_hook_ignores_a_weak_master_key(self, monkeypatch):
+        monkeypatch.setenv("LITELLM_MASTER_KEY", "sk-langop-proxy")
+        assert not custom_auth._master_key_matches("sk-langop-proxy")
+        monkeypatch.setenv("LITELLM_MASTER_KEY", STRONG_KEY)
+        assert custom_auth._master_key_matches(STRONG_KEY)
+        assert not custom_auth._master_key_matches("sk-langop-proxy")
+
+
 class TestLitellmSettings:
     build_litellm_settings = staticmethod(generate_config.build_litellm_settings)
 
@@ -234,6 +287,13 @@ class TestCustomAuthHook:
         from fastapi import HTTPException
         with pytest.raises(HTTPException) as exc:
             self.call("Bearer sk-langop-agent.bad")
+        assert exc.value.status_code == 401
+
+    def test_placeholder_master_key_is_a_401(self, monkeypatch):
+        from fastapi import HTTPException
+        monkeypatch.setenv("LITELLM_MASTER_KEY", "sk-langop-proxy")
+        with pytest.raises(HTTPException) as exc:
+            self.call("Bearer sk-langop-proxy")
         assert exc.value.status_code == 401
 
     def test_agent_key_authenticates_as_that_agent(self):

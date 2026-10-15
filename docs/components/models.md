@@ -82,6 +82,13 @@ spec:
               key: key
 ```
 
+The master key must be at least 32 characters, and must not be `sk-langop-proxy`. That value was the default key in older adapter images and appears in public repositories; it was never a credential. The gateway **refuses to start** with either, naming the problem in its log, and its auth hook ignores such a key too. The check covers `LITELLM_MASTER_KEY` and a `general_settings.master_key` set through `LANGOP_GATEWAY_EXTRA_CONFIG`. Agents never need the master key: they authenticate with their own `MODEL_API_KEY`. Without a master key, every request needs a valid agent key. To create a strong one:
+
+```bash
+kubectl create secret generic gateway-master-key -n <cluster-namespace> \
+  --from-literal=key="sk-$(openssl rand -hex 32)"
+```
+
 ## Supported Providers
 
 | Provider | Value |
