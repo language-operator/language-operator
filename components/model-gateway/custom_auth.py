@@ -7,7 +7,8 @@ first 32 hex characters of HMAC-SHA256(secret, agent-id). The gateway can
 verify it without a database or a key list, and the agent id lands on every
 request as the LiteLLM user id so spend callbacks can attribute usage to the
 agent. The proxy's own master key (LITELLM_MASTER_KEY) keeps working so
-clients that do not carry an agent key are not locked out.
+clients that do not carry an agent key are not locked out, unless it is the
+public placeholder sk-langop-proxy or shorter than 32 characters.
 
 generate-config.py wires this module in as ``general_settings.custom_auth``
 whenever the secret is set; nothing changes when it is not.
@@ -46,9 +47,31 @@ def verify(secret: str, api_key: Optional[str]) -> Optional[str]:
     return None
 
 
+# sk-langop-proxy was the default key of every adapter image before per-agent keys
+# (#972) and appears in public repositories, so it is never a credential.
+PLACEHOLDER_MASTER_KEYS = frozenset({"sk-langop-proxy"})
+MIN_MASTER_KEY_LENGTH = 32
+
+
+def master_key_problem(value: str) -> Optional[str]:
+    """Why ``value`` cannot be the gateway's master key, or None when it can.
+
+    generate-config.py refuses to start the gateway on a problem; the auth hook
+    below ignores such a key, in case the entrypoint was bypassed. The message
+    never contains a key that might be a real secret.
+    """
+    if value in PLACEHOLDER_MASTER_KEYS:
+        return f"{value!r} is a public placeholder, not a credential"
+    if len(value) < MIN_MASTER_KEY_LENGTH:
+        return f"it is {len(value)} characters long; a master key needs at least {MIN_MASTER_KEY_LENGTH}"
+    return None
+
+
 def _master_key_matches(api_key: Optional[str]) -> bool:
     master = os.environ.get("LITELLM_MASTER_KEY")
-    return bool(master) and bool(api_key) and hmac.compare_digest(api_key, master)
+    if not master or master_key_problem(master):
+        return False
+    return bool(api_key) and hmac.compare_digest(api_key, master)
 
 
 async def user_api_key_auth(request, api_key: str):
