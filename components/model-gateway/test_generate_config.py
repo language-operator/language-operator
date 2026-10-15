@@ -278,9 +278,42 @@ class TestCustomAuthHook:
         monkeypatch.setenv("LANGOP_GATEWAY_HMAC_SECRET", "s3cret")
         monkeypatch.delenv("LITELLM_MASTER_KEY", raising=False)
 
-    def call(self, key):
+    def call(self, key, route="/v1/chat/completions"):
         import asyncio
-        return asyncio.run(custom_auth.user_api_key_auth(None, key))
+        from starlette.requests import Request
+        request = Request({"type": "http", "method": "POST", "path": route, "headers": [], "query_string": b""})
+        return asyncio.run(custom_auth.user_api_key_auth(request, key))
+
+    @pytest.mark.parametrize("route", [
+        "/v1/chat/completions", "/chat/completions", "/v1/responses", "/v1/messages",
+        "/v1/messages/count_tokens", "/v1/models", "/v1/embeddings",
+        "/v1beta/models/gemini-2.5-pro:generateContent", "/v1beta/models/gemini-2.5-pro:streamGenerateContent",
+        "/model/info",
+    ])
+    def test_agent_key_reaches_model_routes(self, route):
+        assert self.call("Bearer " + custom_auth.agent_key("s3cret", "agent-a"), route).user_id == "agent-a"
+
+    @pytest.mark.parametrize("route", [
+        "/model/new", "/model/delete", "/key/generate", "/key/list", "/global/spend/logs",
+        "/user/info", "/team/new", "/config/update", "/spend/calculate", "/",
+    ])
+    def test_agent_key_is_refused_on_admin_routes(self, route):
+        from fastapi import HTTPException
+        with pytest.raises(HTTPException) as exc:
+            self.call("Bearer " + custom_auth.agent_key("s3cret", "agent-a"), route)
+        assert exc.value.status_code == 403
+
+    def test_agent_key_without_a_resolvable_route_is_refused(self):
+        import asyncio
+        from fastapi import HTTPException
+        with pytest.raises(HTTPException) as exc:
+            asyncio.run(custom_auth.user_api_key_auth(None, custom_auth.agent_key("s3cret", "agent-a")))
+        assert exc.value.status_code == 403
+
+    def test_master_key_still_reaches_admin_routes(self, monkeypatch):
+        master = "sk-" + "b2" * 20
+        monkeypatch.setenv("LITELLM_MASTER_KEY", master)
+        assert self.call("Bearer " + master, "/model/new").user_role.value == "proxy_admin"
 
     def test_bad_key_is_a_401_not_a_server_error(self):
         # A plain exception becomes a 500 in LiteLLM >= 1.103 (see custom_auth.py).
