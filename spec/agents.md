@@ -38,7 +38,7 @@ Agents have no replica or scale semantics — an Argo Workflow has neither. `spe
 
 ### ServiceAccount requirements
 
-Agent pods run as the operator-managed ServiceAccount `language-agent-<agent-name>`. Beyond the usual read access it is granted `create` and `patch` on `argoproj.io/workflowtaskresults`, which the Argo executor uses to report each node's outcome. A custom `spec.deployment.serviceAccountName` **must** carry that permission or every run will fail at completion.
+Agent pods run as the operator-managed ServiceAccount `language-agent-<agent-name>`. Its Role grants only `create` and `patch` on `argoproj.io/workflowtaskresults`, which the Argo executor uses to report each node's outcome. It has no read access to ConfigMaps, pods or anything else in the namespace; an agent that needs Kubernetes API access gets it through `spec.deployment.roleRules`. A custom `spec.deployment.serviceAccountName` **must** carry that permission or every run will fail at completion.
 
 ## What the Operator Provides
 
