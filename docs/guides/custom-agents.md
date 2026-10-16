@@ -51,7 +51,9 @@ skipped under the default `concurrencyPolicy: Forbid`, and the agent silently st
 
 Agent pods run as the operator-managed ServiceAccount `language-agent-<agent-name>`, which is
 granted `create` and `patch` on `argoproj.io/workflowtaskresults`. The Argo executor writes
-one of those per node to report the outcome of a run.
+one of those per node to report the outcome of a run. That is the whole grant: the agent cannot
+read ConfigMaps, pods or anything else through the Kubernetes API. If your image needs API
+access, add rules with `spec.deployment.roleRules`.
 
 If you point an agent at a ServiceAccount of your own with `spec.deployment.serviceAccountName`,
 it **must** carry that permission or every run will fail at completion, no matter what your

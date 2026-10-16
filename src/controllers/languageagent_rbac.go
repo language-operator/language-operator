@@ -61,7 +61,7 @@ func (r *LanguageAgentReconciler) reconcileAgentServiceAccount(ctx context.Conte
 		return fmt.Errorf("failed to create/update ServiceAccount: %w", err)
 	}
 
-	// Create namespace-scoped Role with minimal permissions for agent pods
+	// Create namespace-scoped Role with least-privilege permissions for agent pods
 	role := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      saName,
@@ -77,16 +77,11 @@ func (r *LanguageAgentReconciler) reconcileAgentServiceAccount(ctx context.Conte
 		role.Labels[langoplabels.LabelKeyK8sComponent] = "role"
 		role.Labels[langoplabels.LabelKeyK8sManagedBy] = "language-operator"
 		role.Rules = []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{""},
-				Resources: []string{"configmaps"},
-				Verbs:     []string{"get", "list"},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"pods"},
-				Verbs:     []string{"get", "list", "watch"},
-			},
+			// This is the whole default grant. Config arrives as a mounted volume,
+			// and no runtime calls the Kubernetes API, so agents get no read access
+			// to ConfigMaps or pods: that would expose every sibling agent's
+			// config.yaml and the gateway's. Add more with spec.deployment.roleRules.
+			//
 			// Agents run as Argo Workflow pods. The Argo executor reports each
 			// node's outcome through a WorkflowTaskResult written with the pod's
 			// own ServiceAccount — without this the run fails at completion.

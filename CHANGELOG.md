@@ -6,6 +6,8 @@ This document tracks releases of the Language Operator project.
 
 ## Unreleased
 
+**Behavior change:** the operator-managed agent Role no longer grants `get`/`list` on ConfigMaps or `get`/`list`/`watch` on pods. Those grants let any agent read every sibling agent's `config.yaml` and the gateway config. Agents receive their config as a mounted file, and Argo's executor needs only `workflowtaskresults`, so nothing shipped uses them. An agent that does read ConfigMaps or pods through the API should add the rule back with `spec.deployment.roleRules`. (#919)
+
 ---
 
 ## v0.3.18 — 2026-10-14

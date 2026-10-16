@@ -67,9 +67,13 @@ func TestLanguageAgentController_ServiceAccountCreation(t *testing.T) {
 	if err := fakeClient.Get(ctx, types.NamespacedName{Name: saName, Namespace: agent.Namespace}, role); err != nil {
 		t.Fatalf("Expected Role %q to exist in namespace %s: %v", saName, agent.Namespace, err)
 	}
-	if len(role.Rules) == 0 {
-		t.Errorf("Expected Role to have at least one rule")
-	}
+	// The default grant is exactly what the Argo executor needs (#919); any
+	// broader rule would let the agent read its siblings' config.
+	assert.Equal(t, []rbacv1.PolicyRule{{
+		APIGroups: []string{"argoproj.io"},
+		Resources: []string{"workflowtaskresults"},
+		Verbs:     []string{"create", "patch"},
+	}}, role.Rules)
 
 	// Verify namespace-scoped RoleBinding created and points to the Role (not the operator ClusterRole).
 	rb := &rbacv1.RoleBinding{}
@@ -222,8 +226,9 @@ func TestLanguageAgentController_RoleRules(t *testing.T) {
 	role := &rbacv1.Role{}
 	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Name: saName, Namespace: agent.Namespace}, role))
 
-	// Default rules (configmaps, pods) must still be present.
-	var hasConfigMaps, hasPods, hasSecrets bool
+	// The default grant is workflowtaskresults only (#919): no namespace-wide
+	// read of ConfigMaps or pods, which would expose sibling agents' config.
+	var hasConfigMaps, hasPods, hasSecrets, hasTaskResults bool
 	for _, rule := range role.Rules {
 		for _, res := range rule.Resources {
 			switch res {
@@ -233,10 +238,13 @@ func TestLanguageAgentController_RoleRules(t *testing.T) {
 				hasPods = true
 			case "secrets":
 				hasSecrets = true
+			case "workflowtaskresults":
+				hasTaskResults = true
 			}
 		}
 	}
-	assert.True(t, hasConfigMaps, "expected default configmaps rule in Role")
-	assert.True(t, hasPods, "expected default pods rule in Role")
+	assert.False(t, hasConfigMaps, "default Role must not grant configmaps")
+	assert.False(t, hasPods, "default Role must not grant pods")
+	assert.True(t, hasTaskResults, "expected workflowtaskresults rule in Role")
 	assert.True(t, hasSecrets, "expected custom secrets rule to be appended to Role")
 }
